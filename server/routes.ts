@@ -58,15 +58,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const telegramId = (req.body.telegramId ?? req.body.telegram_id)?.toString();
       if (!telegramId) return res.status(400).json({ error: 'Missing telegramId' });
 
-      // Manual upsert: try update first, if no rows affected then insert
-      const updateRes = await db.update(users)
-        .set({ username, avatar })
-        .where(eq(users.telegramId, telegramId));
+      // Build dynamic update data (skip undefined fields)
+      const updateData: Record<string, any> = {};
+      if (username !== undefined) updateData.username = username;
+      if (avatar !== undefined) updateData.avatar = avatar;
 
-      // Drizzle returns number of rows updated in updateRes.count (for postgres dialect)
-      // If no existing user, insert new one
-      if ((updateRes as any).count === 0 || (updateRes as any) === 0) {
-        await db.insert(users).values({ telegramId, username, avatar });
+      let rowsUpdated = 0;
+      if (Object.keys(updateData).length > 0) {
+        const result = await db.update(users)
+          .set(updateData)
+          .where(eq(users.telegramId, telegramId));
+        rowsUpdated = (result as any).count ?? 0;
+      }
+
+      // If no rows updated, insert new user
+      if (rowsUpdated === 0) {
+        await db.insert(users).values({ telegramId, username: username ?? '', avatar: avatar ?? '' });
       }
 
       const userResult = await db.select().from(users).where(eq(users.telegramId, telegramId)).limit(1);
