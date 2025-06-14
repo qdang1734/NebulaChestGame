@@ -19,7 +19,8 @@
     "@radix-ui/react-avatar": "^1.1.0",
     "clsx": "^2.1.1",
     "class-variance-authority": "^0.7.0",
-    "tailwind-merge": "^2.3.0"
+    "tailwind-merge": "^2.3.0",
+    "@radix-ui/react-toast": "^1.2.1"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.0.0",
