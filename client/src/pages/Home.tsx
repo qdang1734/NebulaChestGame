@@ -306,6 +306,12 @@ const Home = () => {
   // Fetch egg types from API
   const { data: eggTypes, isLoading: loadingEggs } = useQuery<EggType[]>({
     queryKey: ['/api/egg-types'],
+    queryFn: async () => {
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://nebulachestgamebackend.onrender.com';
+      const res = await fetch(`${apiUrl}/api/egg-types`);
+      if (!res.ok) throw new Error('Failed to fetch egg types');
+      return res.json();
+    }
   });
 
   // Use API data or fall back to defaults
@@ -319,7 +325,8 @@ const Home = () => {
     queryKey: ['/api/kitties', currentEggId],
     queryFn: async () => {
       if (!currentEggId) return [];
-      const response = await fetch(`/api/kitties?eggTypeId=${currentEggId}`);
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://nebulachestgamebackend.onrender.com';
+      const response = await fetch(`${apiUrl}/api/kitties?eggTypeId=${currentEggId}`);
       if (!response.ok) {
         throw new Error('Failed to fetch kitties');
       }

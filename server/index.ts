@@ -4,11 +4,18 @@ import { registerRoutes } from "./routes";
 import { setupVite, log } from "./vite";
 import { startBot } from "./telegram-bot";
 import { startTransactionMonitor } from "./transaction-monitor";
+import cors from 'cors';
 import webhookRouter from "./webhook";
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Enable CORS so frontend hosted on different origin can call the API
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'https://nebulachestgame.onrender.com',
+  credentials: true,
+}));
 
 // Sử dụng webhook router cho các endpoints Telegram
 app.use('/', webhookRouter);
