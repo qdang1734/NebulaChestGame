@@ -79,6 +79,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
+    console.log("--- DEBUG: Attempting to create user with this data: ---", JSON.stringify(insertUser, null, 2));
     const [user] = await db
       .insert(users)
       .values(insertUser)
