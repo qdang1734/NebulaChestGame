@@ -1,0 +1,7 @@
+node_modules
+dist
+.DS_Store
+server/public  # Nếu backend của bạn có thư mục public riêng
+vite.config.ts.*
+*.tar.gz
+.env           # QUAN TRỌNG: Đảm bảo .env ở gốc được ignore
