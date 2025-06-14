@@ -15,8 +15,9 @@ export const users = pgTable("users", {
   lastRewardAt: timestamp("last_reward_at").defaultNow(),
   createdAt: timestamp("created_at").defaultNow(),
   // Telegram integration
-  telegramId: bigint("telegram_id", { mode: 'number' }),
+  telegramId: text("telegram_id").unique(),
   authToken: text("auth_token"),
+  inviteBy: text("invite_by"),
   // Login streak tracking
   lastLoginAt: timestamp("last_login_at").defaultNow(),
   loginStreak: integer("login_streak").notNull().default(0),
@@ -107,12 +108,12 @@ export const collections = pgTable("collections", {
 // Chest Openings table
 export const chestOpenings = pgTable("chest_openings", {
   id: serial("id").primaryKey(),
-  telegram_id: text("telegram_id").notNull(),
-  chest_value: doublePrecision("chest_value").notNull(),
-  opened_at: timestamp("opened_at").notNull().defaultNow(),
-  inviter_id: text("inviter_id"),
-  inviter_reward: doublePrecision("inviter_reward").notNull().default(0),
-  created_at: timestamp("created_at").defaultNow(),
+  telegramId: text("telegram_id").notNull(),
+  chestValue: doublePrecision("chest_value").notNull(),
+  openedAt: timestamp("opened_at").notNull().defaultNow(),
+  inviterId: text("inviter_id"),
+  inviterReward: doublePrecision("inviter_reward").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 // User Collections junction table

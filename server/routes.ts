@@ -53,25 +53,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Đăng nhập hoặc khởi tạo user mới qua Telegram
   app.post('/api/login', async (req: Request, res: Response) => {
     try {
-      const { telegram_id, username, avatar, invite_by } = req.body;
-      if (!telegram_id) return res.status(400).json({ error: 'Missing telegram_id' });
+      const { telegramId, username, avatar, inviteBy } = req.body;
+      if (!telegramId) return res.status(400).json({ error: 'Missing telegramId' });
 
       await db.insert(users)
         .values({
-          telegram_id: telegram_id,
+          telegramId: telegramId,
           username: username,
           avatar: avatar,
-          invite_by: invite_by || null
+          inviteBy: inviteBy || null
         })
         .onConflictDoUpdate({
-          target: users.telegram_id,
+          target: users.telegramId,
           set: {
             username: username,
             avatar: avatar,
           }
         });
 
-      const userResult = await db.select().from(users).where(eq(users.telegram_id, telegram_id)).limit(1);
+      const userResult = await db.select().from(users).where(eq(users.telegramId, telegramId)).limit(1);
       const user = userResult[0];
 
       if (user) {
@@ -88,11 +88,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // API mở rương: cộng thưởng cho inviter nếu là lần đầu mở
   app.post('/api/open-chest', async (req: Request, res: Response) => {
     try {
-      const { telegram_id, chestValue } = req.body;
-      if (!telegram_id || !chestValue) return res.status(400).json({ error: 'Missing parameters' });
+      const { telegramId, chestValue } = req.body;
+      if (!telegramId || !chestValue) return res.status(400).json({ error: 'Missing parameters' });
       
       // Lấy user hiện tại
-      const userResult = await db.select().from(users).where(eq(users.telegram_id, telegram_id)).limit(1);
+      const userResult = await db.select().from(users).where(eq(users.telegramId, telegramId)).limit(1);
       const user = userResult[0];
 
       if (!user) return res.status(404).json({ error: 'User not found' });
@@ -103,28 +103,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Trừ tiền user
-      await db.update(users).set({ balance: sql`${users.balance} - ${chestValue}` }).where(eq(users.telegram_id, telegram_id));
+      await db.update(users).set({ balance: sql`${users.balance} - ${chestValue}` }).where(eq(users.telegramId, telegramId));
 
       // Logic cộng thưởng cho inviter
       let inviterReward = 0;
-      if (user.invite_by) {
+      if (user.inviteBy) {
         // Kiểm tra xem đây có phải lần đầu user mở rương không
-        const openingHistory = await db.select({ count: sql`count(*)` }).from(chestOpenings).where(eq(chestOpenings.telegram_id, telegram_id));
+        const openingHistory = await db.select({ count: sql`count(*)` }).from(chestOpenings).where(eq(chestOpenings.telegramId, telegramId));
         if (Number(openingHistory[0].count) === 0) {
           inviterReward = chestValue * 0.1; // Thưởng 10%
-          await db.update(users).set({ balance: sql`${users.balance} + ${inviterReward}` }).where(eq(users.telegram_id, user.invite_by));
+          await db.update(users).set({ balance: sql`${users.balance} + ${inviterReward}` }).where(eq(users.telegramId, user.inviteBy));
         }
       }
 
       // Ghi lại lịch sử mở rương
       await db.insert(chestOpenings).values({
-        telegram_id: telegram_id,
-        chest_value: chestValue,
-        inviter_id: user.invite_by || null,
-        inviter_reward: inviterReward
+        telegramId: telegramId,
+        chestValue: chestValue,
+        inviterId: user.inviteBy || null,
+        inviterReward: inviterReward
       });
 
-      const updatedUserResult = await db.select().from(users).where(eq(users.telegram_id, telegram_id)).limit(1);
+      const updatedUserResult = await db.select().from(users).where(eq(users.telegramId, telegramId)).limit(1);
       res.json({ success: true, user: updatedUserResult[0] });
     } catch (err) {
       console.error("Error in /api/open-chest:", err);
@@ -135,17 +135,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // API lấy lịch sử mở rương của user
   app.get('/api/chest-history', async (req: Request, res: Response) => {
     try {
-      let telegram_id = req.query.telegram_id;
-      if (Array.isArray(telegram_id)) telegram_id = telegram_id[0];
-      if (typeof telegram_id !== 'string' || !telegram_id) return res.status(400).json({ error: 'Missing telegram_id' });
+      let telegramId = req.query.telegramId;
+      if (Array.isArray(telegramId)) telegramId = telegramId[0];
+      if (typeof telegramId !== 'string' || !telegramId) return res.status(400).json({ error: 'Missing telegramId' });
       const rows = await db.select({
-        chest_value: chestOpenings.chest_value,
-        opened_at: chestOpenings.opened_at,
-        inviter_id: chestOpenings.inviter_id,
-        inviter_reward: chestOpenings.inviter_reward
+        chestValue: chestOpenings.chestValue,
+        openedAt: chestOpenings.openedAt,
+        inviterId: chestOpenings.inviterId,
+        inviterReward: chestOpenings.inviterReward
       }).from(chestOpenings)
-        .where(eq(chestOpenings.telegram_id, telegram_id))
-        .orderBy(desc(chestOpenings.opened_at))
+        .where(eq(chestOpenings.telegramId, telegramId))
+        .orderBy(desc(chestOpenings.openedAt))
         .limit(50);
       res.json({ history: rows });
     } catch (err) {
@@ -156,22 +156,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // API lấy lịch sử invite reward của user
   app.get('/api/invite-rewards-history', async (req: Request, res: Response) => {
     try {
-      let telegram_id = req.query.telegram_id;
-      if (Array.isArray(telegram_id)) telegram_id = telegram_id[0];
-      if (typeof telegram_id !== 'string' || !telegram_id) return res.status(400).json({ error: 'Missing telegram_id' });
+      let telegramId = req.query.telegramId;
+      if (Array.isArray(telegramId)) telegramId = telegramId[0];
+      if (typeof telegramId !== 'string' || !telegramId) return res.status(400).json({ error: 'Missing telegramId' });
       const rows = await db.select({
-        chest_value: chestOpenings.chest_value,
-        opened_at: chestOpenings.opened_at,
-        inviter_reward: chestOpenings.inviter_reward,
-        invitee_id: chestOpenings.telegram_id
+        chestValue: chestOpenings.chestValue,
+        openedAt: chestOpenings.openedAt,
+        inviterReward: chestOpenings.inviterReward,
+        inviteeId: chestOpenings.telegramId
       }).from(chestOpenings)
         .where(
           and(
-            eq(chestOpenings.inviter_id, telegram_id),
-            gt(chestOpenings.inviter_reward, 0)
+            eq(chestOpenings.inviterId, telegramId),
+            gt(chestOpenings.inviterReward, 0)
           )
         )
-        .orderBy(desc(chestOpenings.opened_at))
+        .orderBy(desc(chestOpenings.openedAt))
         .limit(50);
       res.json({ history: rows });
     } catch (err) {
