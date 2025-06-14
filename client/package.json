@@ -22,7 +22,8 @@
     "tailwind-merge": "^2.3.0",
     "@radix-ui/react-toast": "^1.2.1",
     "@radix-ui/react-tabs": "^1.1.0",
-    "@radix-ui/react-dialog": "^1.1.1"
+    "@radix-ui/react-dialog": "^1.1.1",
+    "@radix-ui/react-progress": "^1.1.0"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.0.0",
