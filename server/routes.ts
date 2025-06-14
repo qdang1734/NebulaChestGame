@@ -61,7 +61,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           telegramId: telegramId,
           username: username,
           avatar: avatar,
-          inviteBy: inviteBy || null
+
         })
         .onConflictDoUpdate({
           target: users.telegramId,
