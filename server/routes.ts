@@ -53,7 +53,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Đăng nhập hoặc khởi tạo user mới qua Telegram
   app.post('/api/login', async (req: Request, res: Response) => {
     try {
-      const { telegramId, username, avatar } = req.body;
+      // Accept both camelCase and snake_case telegram ID from client
+      const { username, avatar } = req.body;
+      const telegramId = (req.body.telegramId ?? req.body.telegram_id)?.toString();
       if (!telegramId) return res.status(400).json({ error: 'Missing telegramId' });
 
       await db.insert(users)
@@ -88,7 +90,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // API mở rương: cộng thưởng cho inviter nếu là lần đầu mở
   app.post('/api/open-chest', async (req: Request, res: Response) => {
     try {
-      const { telegramId, chestValue } = req.body;
+      // Accept both camelCase and snake_case telegram ID from client
+      const rawTelegramId = req.body.telegramId ?? req.body.telegram_id;
+      const telegramId = rawTelegramId?.toString();
+      const { chestValue } = req.body;
       if (!telegramId || !chestValue) return res.status(400).json({ error: 'Missing parameters' });
       
       // Lấy user hiện tại
