@@ -3,6 +3,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { startBot } from "./telegram-bot";
+import { startTransactionMonitor } from "./transaction-monitor";
 import webhookRouter from "./webhook";
 
 const app = express();
@@ -72,7 +73,8 @@ app.use((req, res, next) => {
   }, () => {
     log(`serving on port ${port}`);
     
-    // Start Telegram bot
+    // Start Telegram bot and transaction monitor
     startBot();
+    startTransactionMonitor();
   });
 })();

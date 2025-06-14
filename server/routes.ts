@@ -7,7 +7,7 @@ import { eggTypes, kitties, userCollections, eggs, users, chestOpenings } from "
 import { eq, and, desc, gt, sql } from "drizzle-orm";
 import withdrawalApi from "./withdrawal-api";
 import depositApi from "./deposit-api";
-import { startTransactionMonitor } from "./transaction-monitor";
+
 
 // Một hàm trợ giúp để lấy ID người dùng từ token xác thực
 async function getUserIdFromAuth(req: Request): Promise<number | null> {
@@ -1536,8 +1536,8 @@ app.post("/api/open-egg", async (req: Request, res: Response) => {
   });
 
   // Khởi động hệ thống theo dõi giao dịch nạp tự động
-  startTransactionMonitor();
-  console.log("Transaction monitoring system started");
+
+
 
   const httpServer = createServer(app);
 
