@@ -560,25 +560,40 @@ app.get("/api/eggs", async (req: Request, res: Response) => {
     res.status(500).json({ error: "Failed to fetch eggs" });
   }
 });
-
-// Buy and Open an Egg API endpoint
 app.post("/api/open-egg", async (req: Request, res: Response) => {
   try {
     console.log("Received open egg request:", req.body);
     const { eggTypeId } = req.body;
 
-    // Lấy ID người dùng từ token xác thực
-    const userId = await getUserIdFromAuth(req) || mockUserId;
+    // Also accept telegram_id to identify user without auth token
+    const rawTelegramId = req.body.telegramId ?? req.body.telegram_id;
+    let userId: number | null = null;
 
-    // Kiểm tra người dùng có tồn tại không
-    let user = await storage.getUser(userId);
-    if (!user) {
-      return res.status(404).json({ error: "User not found, please login again" });
+    // Lấy ID người dùng từ token xác thực
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+
+      // Import and use the validateAuthToken function
+      const { validateAuthToken } = await import("./telegram-bot");
+      const userSession = validateAuthToken(token);
+
+      if (userSession) {
+        userId = userSession.userId;
+      }
     }
 
-    if (!eggTypeId) {
-      console.log("Missing eggTypeId in request");
-      return res.status(400).json({ error: "Egg type ID is required" });
+    // Fallback to telegram_id if no valid token is found
+    if (!userId && rawTelegramId) {
+      const telegramId = parseInt(rawTelegramId, 10);
+      if (!isNaN(telegramId)) {
+        userId = telegramId;
+      }
+    }
+
+    // Fallback to mock id if still undefined
+    if (!userId) {
+      userId = mockUserId;
     }
 
     // Get egg type price
@@ -589,6 +604,14 @@ app.post("/api/open-egg", async (req: Request, res: Response) => {
 
     // Check user balance
     const currentUser = await db.select().from(users).where(eq(users.id, userId)).then(rows => rows[0]);
+    if (!currentUser) {
+      // If fallback mock user doesn't exist yet, create it with big balance for testing
+      if (userId === mockUserId) {
+        await db.insert(users).values({ id: mockUserId, username: "Mock User", balance: 100000 });
+        console.log("Created mock user for testing");
+      }
+    }
+
     if (!currentUser || currentUser.balance < eggType.price) {
       return res.status(400).json({ error: "Insufficient balance" });
     }
