@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import { insertEggTypeSchema, insertKittySchema } from "./schema";
 import { db } from "./db";
 import { eggTypes, kitties, userCollections, eggs, users, chestOpenings } from "./schema";
-import { eq, and, desc, gt } from "drizzle-orm";
+import { eq, and, desc, gt, sql } from "drizzle-orm";
 import withdrawalApi from "./withdrawal-api";
 import depositApi from "./deposit-api";
 import { startTransactionMonitor } from "./transaction-monitor";
@@ -47,106 +47,138 @@ async function getUserIdFromAuth(req: Request): Promise<number | null> {
 // ID người dùng mặc định để fallback khi không có xác thực
 const mockUserId = 1;
 
-import { upsertUser, getUserByTelegramId, setInviterReward } from './user.model';
+// Functions from user.model.ts are now implemented directly using Drizzle
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Đăng nhập hoặc khởi tạo user mới qua Telegram
   app.post('/api/login', async (req: Request, res: Response) => {
+    try {
+      const { telegram_id, username, avatar, invite_by } = req.body;
+      if (!telegram_id) return res.status(400).json({ error: 'Missing telegram_id' });
+
+      await db.insert(users)
+        .values({
+          telegram_id: telegram_id,
+          username: username,
+          avatar: avatar,
+          invite_by: invite_by || null
+        })
+        .onConflictDoUpdate({
+          target: users.telegram_id,
+          set: {
+            username: username,
+            avatar: avatar,
+          }
+        });
+
+      const userResult = await db.select().from(users).where(eq(users.telegram_id, telegram_id)).limit(1);
+      const user = userResult[0];
+
+      if (user) {
+        res.json({ success: true, user });
+      } else {
+        res.status(500).json({ error: 'Failed to login or create user' });
+      }
+    } catch (err) {
+      console.error("Error in /api/login:", err);
+      res.status(500).json({ error: 'Server error' });
+    }
+  });
 
   // API mở rương: cộng thưởng cho inviter nếu là lần đầu mở
   app.post('/api/open-chest', async (req: Request, res: Response) => {
+    try {
+      const { telegram_id, chestValue } = req.body;
+      if (!telegram_id || !chestValue) return res.status(400).json({ error: 'Missing parameters' });
+      
+      // Lấy user hiện tại
+      const userResult = await db.select().from(users).where(eq(users.telegram_id, telegram_id)).limit(1);
+      const user = userResult[0];
 
-   // API lấy lịch sử mở rương của user
-   app.get('/api/chest-history', async (req: Request, res: Response) => {
+      if (!user) return res.status(404).json({ error: 'User not found' });
 
-   // API lấy lịch sử invite reward của user
-   app.get('/api/invite-rewards-history', async (req: Request, res: Response) => {
-     try {
-       let telegram_id = req.query.telegram_id;
-if (Array.isArray(telegram_id)) telegram_id = telegram_id[0];
-if (typeof telegram_id !== 'string' || !telegram_id) return res.status(400).json({ error: 'Missing telegram_id' });
-const rows = await db.select({
-  chest_value: chestOpenings.chest_value,
-  opened_at: chestOpenings.opened_at,
-  inviter_reward: chestOpenings.inviter_reward,
-  invitee_id: chestOpenings.telegram_id
-}).from(chestOpenings)
-.where(
-  and(
-    eq(chestOpenings.inviter_id, telegram_id),
-    gt(chestOpenings.inviter_reward, 0)
-  )
-)
-.orderBy(desc(chestOpenings.opened_at))
-.limit(50);
-       res.json({ history: rows });
-     } catch (err) {
-       res.status(500).json({ error: 'Server error' });
-     }
-   });
+      // Kiểm tra xem user có đủ tiền không
+      if (user.balance < chestValue) {
+        return res.status(400).json({ error: 'Insufficient balance' });
+      }
 
+      // Trừ tiền user
+      await db.update(users).set({ balance: sql`${users.balance} - ${chestValue}` }).where(eq(users.telegram_id, telegram_id));
+
+      // Logic cộng thưởng cho inviter
+      let inviterReward = 0;
+      if (user.invite_by) {
+        // Kiểm tra xem đây có phải lần đầu user mở rương không
+        const openingHistory = await db.select({ count: sql`count(*)` }).from(chestOpenings).where(eq(chestOpenings.telegram_id, telegram_id));
+        if (Number(openingHistory[0].count) === 0) {
+          inviterReward = chestValue * 0.1; // Thưởng 10%
+          await db.update(users).set({ balance: sql`${users.balance} + ${inviterReward}` }).where(eq(users.telegram_id, user.invite_by));
+        }
+      }
+
+      // Ghi lại lịch sử mở rương
+      await db.insert(chestOpenings).values({
+        telegram_id: telegram_id,
+        chest_value: chestValue,
+        inviter_id: user.invite_by || null,
+        inviter_reward: inviterReward
+      });
+
+      const updatedUserResult = await db.select().from(users).where(eq(users.telegram_id, telegram_id)).limit(1);
+      res.json({ success: true, user: updatedUserResult[0] });
+    } catch (err) {
+      console.error("Error in /api/open-chest:", err);
+      res.status(500).json({ error: 'Server error' });
+    }
+  });
+
+  // API lấy lịch sử mở rương của user
+  app.get('/api/chest-history', async (req: Request, res: Response) => {
     try {
       let telegram_id = req.query.telegram_id;
-if (Array.isArray(telegram_id)) telegram_id = telegram_id[0];
-if (typeof telegram_id !== 'string' || !telegram_id) return res.status(400).json({ error: 'Missing telegram_id' });
-const rows = await db.select({
-  chest_value: chestOpenings.chest_value,
-  opened_at: chestOpenings.opened_at,
-  inviter_id: chestOpenings.inviter_id,
-  inviter_reward: chestOpenings.inviter_reward
-}).from(chestOpenings)
-.where(eq(chestOpenings.telegram_id, telegram_id))
-.orderBy(desc(chestOpenings.opened_at))
-.limit(50);
+      if (Array.isArray(telegram_id)) telegram_id = telegram_id[0];
+      if (typeof telegram_id !== 'string' || !telegram_id) return res.status(400).json({ error: 'Missing telegram_id' });
+      const rows = await db.select({
+        chest_value: chestOpenings.chest_value,
+        opened_at: chestOpenings.opened_at,
+        inviter_id: chestOpenings.inviter_id,
+        inviter_reward: chestOpenings.inviter_reward
+      }).from(chestOpenings)
+        .where(eq(chestOpenings.telegram_id, telegram_id))
+        .orderBy(desc(chestOpenings.opened_at))
+        .limit(50);
       res.json({ history: rows });
     } catch (err) {
       res.status(500).json({ error: 'Server error' });
     }
   });
+
+  // API lấy lịch sử invite reward của user
+  app.get('/api/invite-rewards-history', async (req: Request, res: Response) => {
     try {
-      const { telegram_id, chestValue } = req.body;
-      if (!telegram_id || !chestValue) return res.status(400).json({ error: 'Missing parameters' });
-      // Lấy user hiện tại
-      if (!telegram_id) return res.status(400).json({ error: 'Missing telegram_id' });
-const user = getUserByTelegramId(telegram_id);
-      if (!user) return res.status(404).json({ error: 'User not found' });
-      let inviter = null;
-      let reward = 0;
-      // Nếu có invite_by, cộng thưởng cho inviter mỗi lần mở rương
-      if (user.invite_by) {
-        reward = Math.round(Number(chestValue) * 0.1 * 1e9) / 1e9;
-        inviter = setInviterReward(user.invite_by, reward);
-      }
-      // Ghi lịch sử mở rương
-      await db.insert(chestOpenings).values({
-        telegram_id: String(telegram_id),
-        chest_value: chestValue,
-        opened_at: new Date(),
-        inviter_id: user.invite_by || null,
-        inviter_reward: reward,
-        created_at: new Date(),
-      });
-      res.json({ inviterRewarded: !!inviter, inviter, reward });
+      let telegram_id = req.query.telegram_id;
+      if (Array.isArray(telegram_id)) telegram_id = telegram_id[0];
+      if (typeof telegram_id !== 'string' || !telegram_id) return res.status(400).json({ error: 'Missing telegram_id' });
+      const rows = await db.select({
+        chest_value: chestOpenings.chest_value,
+        opened_at: chestOpenings.opened_at,
+        inviter_reward: chestOpenings.inviter_reward,
+        invitee_id: chestOpenings.telegram_id
+      }).from(chestOpenings)
+        .where(
+          and(
+            eq(chestOpenings.inviter_id, telegram_id),
+            gt(chestOpenings.inviter_reward, 0)
+          )
+        )
+        .orderBy(desc(chestOpenings.opened_at))
+        .limit(50);
+      res.json({ history: rows });
     } catch (err) {
       res.status(500).json({ error: 'Server error' });
     }
   });
-    try {
-      const { telegram_id, username, invite_by, avatar } = req.body;
-      if (!telegram_id) return res.status(400).json({ error: 'Missing telegram_id' });
-      // Always save invite_by if present, even for existing users
-      if (!telegram_id) return res.status(400).json({ error: 'Missing telegram_id' });
-let user = getUserByTelegramId(telegram_id);
-      if (!user) {
-        user = upsertUser({ telegram_id, username, invite_by, avatar });
-      } else {
-        user = upsertUser({ telegram_id, username, invite_by, avatar });
-      }
-      res.json({ user });
-    } catch (err) {
-      res.status(500).json({ error: 'Server error' });
-    }
-  });
+
   // TON Connect manifest handlers - support both paths for compatibility
   const tonConnectManifest = {
     url: "https://0df6e7a7-b20d-4f26-a61c-195fdadf8818-00-3t7u5xjgmjgwx.pike.replit.dev",
