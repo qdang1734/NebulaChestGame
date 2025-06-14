@@ -683,6 +683,56 @@ app.post("/api/open-egg", async (req: Request, res: Response) => {
   }
 });
 
+  // Get user's opened kitties grouped with counts
+  app.get("/api/user-kitties", async (req: Request, res: Response) => {
+    try {
+      let userId: number | undefined;
+
+      // Reuse token logic from /api/user
+      const authHeader = req.headers.authorization;
+      if (authHeader && authHeader.startsWith("Bearer ")) {
+        const token = authHeader.substring(7);
+        const { validateAuthToken } = await import("./telegram-bot");
+        const userSession = validateAuthToken(token);
+        if (userSession) userId = userSession.userId;
+      }
+
+      if (!userId) {
+        const queryToken = req.query.token as string | undefined;
+        if (queryToken) {
+          const { validateAuthToken } = await import("./telegram-bot");
+          const userSession = validateAuthToken(queryToken);
+          if (userSession) userId = userSession.userId;
+        }
+      }
+
+      // Fallback to mock id if still undefined
+      if (!userId) userId = mockUserId;
+
+      // Fetch kitties owned by user (opened eggs)
+      const rows = await db
+        .select({
+          id: kitties.id,
+          name: kitties.name,
+          rarity: kitties.rarity,
+          earnPerDay: kitties.earnPerDay,
+          color: kitties.color,
+          spotColor: kitties.spotColor,
+          imageUrl: kitties.imageUrl,
+          count: sql`COUNT(*)`.as("count"),
+        })
+        .from(eggs)
+        .innerJoin(kitties, eq(eggs.kittyId, kitties.id))
+        .where(and(eq(eggs.userId, userId), eq(eggs.isOpened, true)))
+        .groupBy(kitties.id);
+
+      res.json(rows);
+    } catch (error) {
+      console.error("Error fetching user kitties:", error);
+      res.status(500).json({ error: "Failed to fetch user kitties" });
+    }
+  });
+
   // Claim daily rewards
   // Get current user data
   app.get("/api/user", async (req: Request, res: Response) => {

@@ -12,8 +12,13 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
-  // Get auth token from localStorage if available
-  const authToken = localStorage.getItem('authToken');
+  // Get auth token from localStorage if available (safe in Telegram WebView)
+  let authToken: string | null = null;
+  try {
+    authToken = localStorage.getItem('authToken');
+  } catch (_) {
+    // Storage might be unavailable (e.g., inside Telegram WebView); ignore
+  }
   
   // Build headers with auth token if available
   const headers: Record<string, string> = {};
@@ -52,7 +57,12 @@ export const getQueryFn: <T>(options: {
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
     // Get auth token from localStorage if available
-    const authToken = localStorage.getItem('authToken');
+    let authToken: string | null = null;
+    try {
+      authToken = localStorage.getItem('authToken');
+    } catch (_) {
+      // ignore
+    }
     
     // Build headers object
     const headers: Record<string, string> = {};
