@@ -195,11 +195,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const { token } = req.query;
 
     // HTML template for redirection page
+    const frontEndUrl = process.env.FRONTEND_URL || 'https://nebulachestgame.onrender.com';
+
     const redirectHtml = `
     <!DOCTYPE html>
     <html>
     <head>
         <title>NebulaChest</title>
+
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <style>
             body {
@@ -262,12 +265,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             <h1>NebulaChest</h1>
             <div class="loader"></div>
             <p>Đang chuyển hướng đến NebulaChest Game...</p>
-            <a href="/?token=${token}" class="redirect-btn">Nhấn vào đây nếu không tự động chuyển hướng</a>
+            <a href="${frontEndUrl}/?token=${token}" class="redirect-btn">Nhấn vào đây nếu không tự động chuyển hướng</a>
         </div>
         <script>
             // Tự động chuyển hướng sau 2 giây
             setTimeout(() => {
-                window.location.href = "/?token=${token}";
+                window.location.href = "${frontEndUrl}/?token=${token}";
             }, 2000);
         </script>
     </body>
