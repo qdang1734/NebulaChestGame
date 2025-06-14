@@ -314,10 +314,17 @@ const Home = () => {
     }
   });
 
-  // Use API data or fall back to defaults
-  const eggs = eggTypes || defaultEggs;
+  // Use API data if non-empty, otherwise fallback to defaults
+  const eggs = (eggTypes && eggTypes.length > 0) ? eggTypes : defaultEggs;
 
   // Get current egg ID for fetching kitties
+  // Ensure currentEgg index is within bounds when eggs array changes
+  useEffect(() => {
+    if (currentEgg >= eggs.length) {
+      setCurrentEgg(0);
+    }
+  }, [eggs.length]);
+
   const currentEggId = eggs[currentEgg]?.id;
 
   // Fetch kitties data for the current egg
