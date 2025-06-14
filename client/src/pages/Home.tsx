@@ -388,6 +388,12 @@ const Home = () => {
     refetchOnWindowFocus: false,
   });
 
+  // Update FE collection state when data from API changes
+  useEffect(() => {
+    setFeCollection(collectionKitties);
+    setFeDailyReward(collectionKitties.reduce((sum, kitty) => sum + kitty.earnPerDay * kitty.count, 0));
+  }, [collectionKitties]);
+
   // Refetch collection when a new kitty is opened
   useEffect(() => {
     if (openedKitty) {
