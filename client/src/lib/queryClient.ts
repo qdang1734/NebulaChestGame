@@ -26,7 +26,7 @@ export async function apiRequest(
     headers["Authorization"] = `Bearer ${authToken}`;
   }
   
-  const res = await fetch(`https://pxiltsic.cloudfly.vn/api/${url}`, {
+  const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/${url}`, {
     method,
     headers,
     body: data ? JSON.stringify(data) : undefined,
@@ -53,7 +53,7 @@ export const getQueryFn: <T>(options: {
       headers["Authorization"] = `Bearer ${authToken}`;
     }
     
-    const res = await fetch(`https://pxiltsic.cloudfly.vn/api/${queryKey[0] as string}`, {
+    const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/${queryKey[0] as string}`, {
       headers,
       credentials: "include",
     });
