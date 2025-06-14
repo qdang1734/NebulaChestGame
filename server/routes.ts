@@ -53,7 +53,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Đăng nhập hoặc khởi tạo user mới qua Telegram
   app.post('/api/login', async (req: Request, res: Response) => {
     try {
-      const { telegramId, username, avatar, inviteBy } = req.body;
+      const { telegramId, username, avatar } = req.body;
       if (!telegramId) return res.status(400).json({ error: 'Missing telegramId' });
 
       await db.insert(users)
@@ -105,22 +105,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Trừ tiền user
       await db.update(users).set({ balance: sql`${users.balance} - ${chestValue}` }).where(eq(users.telegramId, telegramId));
 
-      // Logic cộng thưởng cho inviter
-      let inviterReward = 0;
-      if (user.inviteBy) {
-        // Kiểm tra xem đây có phải lần đầu user mở rương không
-        const openingHistory = await db.select({ count: sql`count(*)` }).from(chestOpenings).where(eq(chestOpenings.telegramId, telegramId));
-        if (Number(openingHistory[0].count) === 0) {
-          inviterReward = chestValue * 0.1; // Thưởng 10%
-          await db.update(users).set({ balance: sql`${users.balance} + ${inviterReward}` }).where(eq(users.telegramId, user.inviteBy));
-        }
-      }
+      // Inviter reward logic disabled (inviteBy column removed)
+      const inviterReward = 0;
 
       // Ghi lại lịch sử mở rương
       await db.insert(chestOpenings).values({
         telegramId: telegramId,
         chestValue: chestValue,
-        inviterId: user.inviteBy || null,
+        inviterId: null,
         inviterReward: inviterReward
       });
 
