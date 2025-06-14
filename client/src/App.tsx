@@ -100,7 +100,7 @@ function App() {
         <div className="flex justify-center items-start min-h-screen w-full bg-gray-900">
           <div className="w-full max-w-sm mx-auto h-screen overflow-y-auto overflow-x-hidden relative bg-black/30 shadow-2xl shadow-black/60 mobile-container" style={{ 
             maxHeight: '100vh', 
-            width: 'var(--mobile-width)', 
+             
             touchAction: 'manipulation',
             backgroundImage: `url(${backgroundImage})`,
             backgroundSize: 'cover',

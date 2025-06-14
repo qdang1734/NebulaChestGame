@@ -125,11 +125,7 @@
   animation: nav-pulse 2s infinite ease-in-out;
 }
 
-/* Mobile styling */
-:root {
-  --mobile-width: 375px;
-  --mobile-height: 812px;
-}
+/* Mobile styling definitions were here, removed for responsiveness */
 
 /* Mobile container styling */
 .mobile-container {
@@ -165,9 +161,9 @@
     border: 10px solid #000;
     box-shadow: 0 0 0 2px #333, 0 0 30px rgba(0, 0, 0, 0.8);
     overflow: hidden;
-    width: var(--mobile-width) !important;
-    height: var(--mobile-height);
-    max-height: 95vh;
+    /* Width is now controlled by Tailwind's `w-full` and `max-w-sm` classes */
+    height: 90vh;
+    max-height: 812px; /* A common phone height */
   }
   
   /* Add notch styling */
