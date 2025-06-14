@@ -3,7 +3,7 @@ services:
     name: nebulaChest
     env: node
     rootDir: server
-    buildCommand: npm run build
+    buildCommand: 'rm -rf dist && npm install && npm run build'
     startCommand: npm run start
     paths:
       - server/**
