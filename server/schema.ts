@@ -17,7 +17,7 @@ export const users = pgTable("users", {
   // Telegram integration
   telegramId: text("telegram_id").unique(),
   authToken: text("auth_token"),
-  inviteBy: text("invite_by"),
+
   // Login streak tracking
   lastLoginAt: timestamp("last_login_at").defaultNow(),
   loginStreak: integer("login_streak").notNull().default(0),
