@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "server.js",
   "scripts": {
-    "build": "npm install --prefix ../ && tsc",
+    "build": "rm -rf dist && npm install --prefix ../ && tsc",
     "start": "node dist/server/index.js"
   }
 
