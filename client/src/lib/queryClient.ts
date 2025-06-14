@@ -26,7 +26,15 @@ export async function apiRequest(
     headers["Authorization"] = `Bearer ${authToken}`;
   }
   
-  const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/${url}`, {
+  const baseApi = import.meta.env.VITE_API_URL || 'https://nebulachestgamebackend.onrender.com';
+  // If caller already provides absolute or leading-slash path, keep it, otherwise prepend /api/
+  let path = url as string;
+  if (!path.startsWith('/')) {
+    path = `/api/${path}`;
+  }
+  const fullUrl = `${baseApi}${path}`;
+
+  const res = await fetch(fullUrl, {
     method,
     headers,
     body: data ? JSON.stringify(data) : undefined,
@@ -53,7 +61,14 @@ export const getQueryFn: <T>(options: {
       headers["Authorization"] = `Bearer ${authToken}`;
     }
     
-    const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/${queryKey[0] as string}`, {
+    const baseApi = import.meta.env.VITE_API_URL || 'https://nebulachestgamebackend.onrender.com';
+    let path = queryKey[0] as string;
+    if (!path.startsWith('/')) {
+      path = `/api/${path}`;
+    }
+    const fullUrl = `${baseApi}${path}`;
+
+    const res = await fetch(fullUrl, {
       headers,
       credentials: "include",
     });
