@@ -3,6 +3,8 @@ import { storage } from './storage';
 import { InsertUser } from './schema';
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '7958696875:AAFD4wI0Fh54m8v9jDDdkZgFEKlLNT-xie4';
+// Base URL for generating Telegram WebApp deep links
+const BASE_URL = process.env.APP_URL || 'https://nebulachestgamebackend.onrender.com';
 export const bot = new Telegraf(BOT_TOKEN);
 
 // In-memory storage for user sessions - maps Telegram IDs to our internal user IDs
@@ -141,7 +143,7 @@ bot.start(async (ctx) => {
     
     // Generate game link with token
     // Sử dụng route /telegram để xử lý chuyển hướng an toàn
-    const baseUrl = 'https://nebulachestgame.onrender.com';
+    const baseUrl = BASE_URL;
     const gameLink = `${baseUrl}/telegram?token=${session.authToken}`;
     
     console.log(`[Telegram Bot] Generated game link: ${gameLink}`);
@@ -211,7 +213,7 @@ bot.command('game', async (ctx) => {
     
     // Create deep link to the game with authentication token
     // Sử dụng route /telegram để xử lý chuyển hướng an toàn
-    const baseUrl = 'https://nebulachestgame.onrender.com';
+    const baseUrl = BASE_URL;
     const gameLink = `${baseUrl}/telegram?token=${session.authToken}`;
     
     console.log(`[Telegram Bot] Generated game link: ${gameLink}`);
@@ -265,7 +267,7 @@ bot.command('menu', async (ctx) => {
     }
     
     // Sử dụng route /telegram để xử lý chuyển hướng an toàn
-    const baseUrl = 'https://nebulachestgame.onrender.com';
+    const baseUrl = BASE_URL;
     const gameLink = `${baseUrl}/telegram?token=${session.authToken}`;
     
     console.log(`[Telegram Bot] Generated game link: ${gameLink}`);
