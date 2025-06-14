@@ -272,3 +272,4 @@ export type UserCollection = typeof userCollections.$inferSelect;
 
 export type InsertUserTask = z.infer<typeof insertUserTaskSchema>;
 export type UserTask = typeof userTasks.$inferSelect;
+// trigger redeploy 2025-06-14
