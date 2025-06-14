@@ -135,9 +135,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // API lấy lịch sử mở rương của user
   app.get('/api/chest-history', async (req: Request, res: Response) => {
     try {
-      let telegramId = req.query.telegramId;
-      if (Array.isArray(telegramId)) telegramId = telegramId[0];
-      if (typeof telegramId !== 'string' || !telegramId) return res.status(400).json({ error: 'Missing telegramId' });
+      const telegramId = req.query.telegramId as string;
+      if (!telegramId) return res.status(400).json({ error: 'Missing telegramId' });
+
       const rows = await db.select({
         chestValue: chestOpenings.chestValue,
         openedAt: chestOpenings.openedAt,
@@ -156,9 +156,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // API lấy lịch sử invite reward của user
   app.get('/api/invite-rewards-history', async (req: Request, res: Response) => {
     try {
-      let telegramId = req.query.telegramId;
-      if (Array.isArray(telegramId)) telegramId = telegramId[0];
-      if (typeof telegramId !== 'string' || !telegramId) return res.status(400).json({ error: 'Missing telegramId' });
+      const telegramId = req.query.telegramId as string;
+      if (!telegramId) return res.status(400).json({ error: 'Missing telegramId' });
+
       const rows = await db.select({
         chestValue: chestOpenings.chestValue,
         openedAt: chestOpenings.openedAt,

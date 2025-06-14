@@ -2,19 +2,19 @@ import { Telegraf, Context } from 'telegraf';
 import { storage } from './storage';
 import { InsertUser } from './schema';
 
-const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '7709528475:AAEfAIRIj56GAZRkTg_or9GEO7uuE_pwHbs';
+const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '7958696875:AAFD4wI0Fh54m8v9jDDdkZgFEKlLNT-xie4';
 export const bot = new Telegraf(BOT_TOKEN);
 
 // In-memory storage for user sessions - maps Telegram IDs to our internal user IDs
 interface UserSession {
   userId: number;
-  telegramId: number;
+  telegramId: string;
   authToken: string;
   username: string;
   photoUrl?: string;
 }
 
-const userSessions = new Map<number, UserSession>();
+const userSessions = new Map<string, UserSession>();
 
 export function generateAuthToken(length = 32): string {
   let result = '';
@@ -26,7 +26,7 @@ export function generateAuthToken(length = 32): string {
 }
 
 // Get or create user
-async function getOrCreateUser(telegramId: number, username: string, photoUrl?: string): Promise<UserSession> {
+async function getOrCreateUser(telegramId: string, username: string, photoUrl?: string): Promise<UserSession> {
   // Check if user already exists in our session
   if (userSessions.has(telegramId)) {
     return userSessions.get(telegramId)!;
@@ -118,31 +118,30 @@ bot.start(async (ctx) => {
   console.log("[Telegram Bot] Received /start command");
   
   try {
-    const telegramId = ctx.from.id;
-    console.log(`[Telegram Bot] Processing /start for user ID: ${telegramId}`);
+    const telegramIdNum = ctx.from.id;
+    const telegramIdStr = telegramIdNum.toString();
+    console.log(`[Telegram Bot] Processing /start for user ID: ${telegramIdStr}`);
     
-    const username = ctx.from.username || ctx.from.first_name || `user_${telegramId}`;
+    const username = ctx.from.username || ctx.from.first_name || `user_${telegramIdStr}`;
     let photoUrl: string | undefined;
-    
+
     try {
-      // Try to get user's profile photos
-      const photos = await ctx.telegram.getUserProfilePhotos(telegramId, 0, 1);
-      if (photos && photos.photos.length > 0 && photos.photos[0].length > 0) {
-        const fileId = photos.photos[0][0].file_id;
-        const fileInfo = await ctx.telegram.getFile(fileId);
-        photoUrl = `https://api.telegram.org/file/bot${BOT_TOKEN}/${fileInfo.file_path}`;
+      const userPhotos = await ctx.telegram.getUserProfilePhotos(telegramIdNum, 0, 1);
+      if (userPhotos.total_count > 0) {
+        const fileId = userPhotos.photos[0][0].file_id;
+        photoUrl = (await ctx.telegram.getFileLink(fileId)).href;
       }
     } catch (error) {
-      console.error('[Telegram Bot] Error getting user profile photo:', error);
+      console.warn(`[Telegram Bot] Could not get user profile photo for ${telegramIdStr}:`, error);
     }
-    
+
     console.log(`[Telegram Bot] Getting or creating user: ${username}`);
     // Create or get user
-    const session = await getOrCreateUser(telegramId, username, photoUrl);
+    const session = await getOrCreateUser(telegramIdStr, username, photoUrl);
     
     // Generate game link with token
     // Sử dụng route /telegram để xử lý chuyển hướng an toàn
-    const baseUrl = 'https://0df6e7a7-b20d-4f26-a61c-195fdadf8818-00-3t7u5xjgmjgwx.pike.replit.dev';
+    const baseUrl = 'https://nebulachestgame.onrender.com';
     const gameLink = `${baseUrl}/telegram?token=${session.authToken}`;
     
     console.log(`[Telegram Bot] Generated game link: ${gameLink}`);
@@ -199,26 +198,27 @@ bot.command('game', async (ctx) => {
   console.log("[Telegram Bot] Received /game command");
   
   try {
-    const telegramId = ctx.from.id;
-    console.log(`[Telegram Bot] Processing /game for user ID: ${telegramId}`);
-    
-    const session = userSessions.get(telegramId);
+    const telegramIdNum = ctx.from.id;
+    const telegramIdStr = telegramIdNum.toString();
+    console.log(`[Telegram Bot] Processing /game for user ID: ${telegramIdStr}`);
+
+    const session = userSessions.get(telegramIdStr);
     
     if (!session) {
-      console.log(`[Telegram Bot] No session found for user ID: ${telegramId}`);
+      console.log(`[Telegram Bot] No session found for user ID: ${telegramIdStr}`);
       return ctx.reply('Bạn cần sử dụng lệnh /start trước để đăng nhập.');
     }
     
     // Create deep link to the game with authentication token
     // Sử dụng route /telegram để xử lý chuyển hướng an toàn
-    const baseUrl = 'https://0df6e7a7-b20d-4f26-a61c-195fdadf8818-00-3t7u5xjgmjgwx.pike.replit.dev';
+    const baseUrl = 'https://nebulachestgame.onrender.com';
     const gameLink = `${baseUrl}/telegram?token=${session.authToken}`;
     
     console.log(`[Telegram Bot] Generated game link: ${gameLink}`);
     
     try {
       // Sử dụng Telegram WebApp để mở ứng dụng trực tiếp trong Telegram
-      console.log(`[Telegram Bot] Sending game button to user ID: ${telegramId}`);
+      console.log(`[Telegram Bot] Sending game button to user ID: ${telegramIdStr}`);
       await ctx.reply('🎮 Trò chơi NebulaChest 🐱', {
         reply_markup: {
           inline_keyboard: [
@@ -253,22 +253,23 @@ bot.command('menu', async (ctx) => {
   console.log("[Telegram Bot] Received /menu command");
   
   try {
-    const telegramId = ctx.from.id;
-    console.log(`[Telegram Bot] Processing /menu for user ID: ${telegramId}`);
-    
-    const session = userSessions.get(telegramId);
+    const telegramIdNum = ctx.from.id;
+    const telegramIdStr = telegramIdNum.toString();
+    console.log(`[Telegram Bot] Processing /menu for user ID: ${telegramIdStr}`);
+
+    const session = userSessions.get(telegramIdStr);
     
     if (!session) {
-      console.log(`[Telegram Bot] No session found for user ID: ${telegramId}`);
+      console.log(`[Telegram Bot] No session found for user ID: ${telegramIdStr}`);
       return ctx.reply('Bạn cần sử dụng lệnh /start trước để đăng nhập.');
     }
     
     // Sử dụng route /telegram để xử lý chuyển hướng an toàn
-    const baseUrl = 'https://0df6e7a7-b20d-4f26-a61c-195fdadf8818-00-3t7u5xjgmjgwx.pike.replit.dev';
+    const baseUrl = 'https://nebulachestgame.onrender.com';
     const gameLink = `${baseUrl}/telegram?token=${session.authToken}`;
     
     console.log(`[Telegram Bot] Generated game link: ${gameLink}`);
-    console.log(`[Telegram Bot] Sending menu to user ID: ${telegramId}`);
+    console.log(`[Telegram Bot] Sending menu to user ID: ${telegramIdStr}`);
     
     await ctx.reply('📋 Menu trò chơi NebulaChest 🐱', {
       reply_markup: {
@@ -305,26 +306,25 @@ bot.command('menu', async (ctx) => {
 
 // Handle callback queries
 bot.on('callback_query', async (ctx) => {
+  if (!('data' in ctx.callbackQuery)) {
+    return ctx.answerCbQuery();
+  }
+  const callbackData = ctx.callbackQuery.data;
+  console.log('[Telegram Bot] Received callback query:', callbackData);
+
+  // Get user session from Telegram ID
+  const telegramIdStr = ctx.from.id.toString();
+  const session = userSessions.get(telegramIdStr);
+
+  if (!session) {
+    console.log(`[Telegram Bot] No session found for user ID: ${telegramIdStr}`);
+    return ctx.answerCbQuery('Bạn cần sử dụng lệnh /start trước để đăng nhập.', { show_alert: true });
+  }
+
   try {
-    const telegramId = ctx.from?.id;
-    if (!telegramId) return;
-    
-    // Check if ctx.callbackQuery has data property
-    const callbackData = ctx.callbackQuery && 'data' in ctx.callbackQuery ? ctx.callbackQuery.data : undefined;
-    if (!callbackData) {
-      await ctx.answerCbQuery('Không tìm thấy dữ liệu');
-      return;
-    }
-    
-    const session = userSessions.get(telegramId);
-    if (!session) {
-      await ctx.answerCbQuery('Vui lòng gõ /start để bắt đầu sử dụng bot');
-      return;
-    }
-    
-    // Answer the callback query to remove loading state
+    // Answer callback query to remove the "loading" state
     await ctx.answerCbQuery();
-    
+
     // Handle different callback data
     switch (callbackData) {
       case 'rank':
@@ -357,7 +357,7 @@ bot.on('callback_query', async (ctx) => {
         await ctx.reply(
           `🤝 Giới thiệu bạn bè tham gia NebulaChest!\n\n` +
           `Chia sẻ liên kết này đến bạn bè của bạn:\n` +
-          `https://t.me/${botUsername}?start=${telegramId}`
+          `https://t.me/${botUsername}?start=${session.telegramId}`
         );
         break;
       case 'help':
