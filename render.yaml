@@ -2,8 +2,9 @@ services:
   - type: web
     name: nebulaChest
     env: node
-    buildCommand: npm install && npm run build
-    startCommand: npm start
+    rootDir: server
+    buildCommand: npm run build
+    startCommand: npm run start
     envVars:
       - key: NODE_ENV
         value: production
