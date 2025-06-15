@@ -73,11 +73,14 @@ export const eggs = pgTable("eggs", {
   userId: integer("user_id").references(() => users.id),
   eggTypeId: integer("egg_type_id").references(() => eggTypes.id).notNull(),
   isOpened: boolean("is_opened").default(false),
-  kittyId: integer("kitty_id").references(() => kitties.id),
-  purchasedAt: timestamp("purchased_at").defaultNow(),
+  kittyId: integer('kitty_id').references(() => kitties.id),
   openedAt: timestamp("opened_at"),
+  purchasedAt: timestamp("purchased_at").defaultNow(),
   createdAt: timestamp("created_at").defaultNow(),
 });
+
+export type Egg = typeof eggs.$inferSelect;
+export type InsertEgg = typeof eggs.$inferInsert;
 
 export const eggsRelations = relations(eggs, ({ one }) => ({
   user: one(users, {
@@ -215,12 +218,6 @@ export const insertKittySchema = createInsertSchema(kitties).pick({
   imageUrl: true,
 });
 
-export const insertEggSchema = createInsertSchema(eggs).pick({
-  userId: true,
-  eggTypeId: true,
-  isOpened: true,
-  kittyId: true,
-});
 
 export const insertCollectionSchema = createInsertSchema(collections).pick({
   name: true,
@@ -270,8 +267,6 @@ export type EggType = typeof eggTypes.$inferSelect;
 export type InsertKitty = z.infer<typeof insertKittySchema>;
 export type Kitty = typeof kitties.$inferSelect;
 
-export type InsertEgg = z.infer<typeof insertEggSchema>;
-export type Egg = typeof eggs.$inferSelect;
 
 export type InsertCollection = z.infer<typeof insertCollectionSchema>;
 export type Collection = typeof collections.$inferSelect;

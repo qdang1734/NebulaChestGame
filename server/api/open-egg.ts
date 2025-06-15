@@ -1,85 +1,102 @@
 import { Router, type Response } from 'express';
 import { authenticateToken, type AuthRequest } from './middleware';
 import { storage } from '../storage';
-import type { Kitty } from '../schema';
+import { db } from '../db';
+import { eq, and } from 'drizzle-orm';
+import { eggTypes, kitties, userCollections, users } from '../schema';
 
 const router = Router();
 
-// Helper function for weighted random selection based on drop rates
-const selectRandomKitty = (kitties: Kitty[]): Kitty | null => {
-  if (!kitties || kitties.length === 0) {
-    return null;
-  }
-
-  const totalWeight = kitties.reduce((sum, kitty) => sum + (kitty.dropRate || 0), 0);
-  let random = Math.random() * totalWeight;
-
-  for (const kitty of kitties) {
-    if (random < (kitty.dropRate || 0)) {
-      return kitty;
-    }
-    random -= (kitty.dropRate || 0);
-  }
-
-  // Fallback in case of floating point inaccuracies, should rarely happen
-  return kitties[kitties.length - 1];
-};
-
 router.post('/open-egg', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
-    const { eggId } = req.body;
     const userId = req.user?.id;
-
     if (!userId) {
-      return res.status(401).json({ success: false, error: 'User not authenticated. Please log in.' });
+      return res.status(401).json({ error: "Unauthorized" });
     }
 
-    if (!eggId) {
-      return res.status(400).json({ success: false, error: 'Egg ID is required' });
+    const { eggTypeId } = req.body;
+    if (eggTypeId === undefined) {
+      return res.status(400).json({ error: "Egg Type ID is required" });
     }
 
-    // 1. Fetch the egg and validate it
-    const egg = await storage.getEgg(eggId);
+    const user = await storage.getUser(userId);
+    const [eggType] = await db.select().from(eggTypes).where(eq(eggTypes.id, eggTypeId));
 
-    if (!egg) {
-      return res.status(404).json({ success: false, error: 'Egg not found' });
+    if (!user) {
+      return res.status(404).json({ error: "User not found." });
+    }
+    if (!eggType) {
+      return res.status(404).json({ error: "Egg type not found." });
     }
 
-    if (egg.userId !== userId) {
-      return res.status(403).json({ success: false, error: 'This egg does not belong to you' });
+    const price = eggType.price || 0;
+    const userBalance = user.balance || 0;
+    if (userBalance < price) {
+      return res.status(400).json({ error: "Insufficient balance." });
     }
 
-    if (egg.isOpened) {
-      return res.status(400).json({ success: false, error: 'This egg has already been opened' });
+    const newBalance = userBalance - price;
+    await db.update(users).set({ balance: newBalance }).where(eq(users.id, userId));
+
+    const possibleKitties = await db.select().from(kitties).where(eq(kitties.eggTypeId, eggTypeId));
+    if (possibleKitties.length === 0) {
+      return res.status(500).json({ error: "No kitties found for this egg type." });
     }
 
-    // 2. Get possible kitties for this egg type
-    const possibleKitties = await storage.getKittiesByEggType(egg.eggTypeId);
+    const totalDropRate = possibleKitties.reduce((sum, kitty) => sum + (kitty.dropRate || 0), 0);
+    let random = Math.random() * totalDropRate;
+    let selectedKitty = null;
 
-    if (!possibleKitties || possibleKitties.length === 0) {
-      return res.status(500).json({ success: false, error: 'Configuration error: No possible kitties found for this egg type.' });
+    for (const kitty of possibleKitties) {
+      random -= (kitty.dropRate || 0);
+      if (random <= 0) {
+        selectedKitty = kitty;
+        break;
+      }
     }
-    
-    // 3. Select a random kitty based on drop rate
-    const selectedKitty = selectRandomKitty(possibleKitties);
 
     if (!selectedKitty) {
-        return res.status(500).json({ success: false, error: 'Configuration error: Could not select a kitty. Check drop rates.' });
+      selectedKitty = possibleKitties[0];
     }
 
-    // 4. Update the egg record in the database, linking the selected kitty
-    await storage.openEgg(eggId, selectedKitty.id);
-
-    // 5. Return the successful result with the hatched kitty
-    res.json({
-      success: true,
-      message: 'Egg opened successfully!',
-      kitty: selectedKitty,
+    await storage.createEgg({
+      userId: userId,
+      eggTypeId: eggTypeId,
+      isOpened: true,
+      openedAt: new Date(),
+      kittyId: selectedKitty.id,
     });
 
+    const collection = await storage.getCollectionByKittyId(selectedKitty.id);
+    if (!collection) {
+      return res.status(500).json({ error: "Could not find collection for the awarded kitty." });
+    }
+
+    const [existingUserCollection] = await db.select()
+      .from(userCollections)
+      .where(and(
+          eq(userCollections.userId, userId),
+          eq(userCollections.collectionId, collection.id)
+      ));
+
+    if (existingUserCollection) {
+      const newCount = (existingUserCollection.count || 0) + 1;
+      await db.update(userCollections)
+          .set({ count: newCount })
+          .where(eq(userCollections.id, existingUserCollection.id));
+    } else {
+      await storage.addUserCollection({
+          userId: userId,
+          collectionId: collection.id,
+          count: 1
+      });
+    }
+
+    res.json(selectedKitty);
+
   } catch (error) {
-    console.error('Error opening egg:', error);
-    res.status(500).json({ success: false, error: 'Failed to open egg due to a server error.' });
+    console.error("Error opening egg:", error);
+    res.status(500).json({ error: "Failed to open egg" });
   }
 });
 
