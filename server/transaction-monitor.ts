@@ -8,6 +8,22 @@ import { users } from './schema';
 import { eq } from 'drizzle-orm';
 import { GAME_WALLET_ADDRESS, isValidTonAddress, nanoToTon } from './ton-utils';
 
+// Toncenter API URL (Mainnet)
+const TONCENTER_API_URL = "https://toncenter.com/api/v2/jsonRPC";
+const TONCENTER_API_KEY_MAINNET = process.env.TONCENTER_API_KEY_MAINNET;
+
+interface ToncenterTxResult {
+  transaction_id: { hash: string; lt: string; };
+  in_msg: { msg_type: string; value: string; source: string; destination: string; };
+  utime: number;
+}
+
+interface ToncenterResponse {
+  ok: boolean;
+  result?: ToncenterTxResult[];
+  error?: string;
+}
+
 interface DepositTransaction {
   txHash: string;
   fromAddress: string;
@@ -50,38 +66,86 @@ export function registerDepositTransaction(txHash: string, userId: number, amoun
  */
 export async function verifyTransaction(txHash: string): Promise<DepositTransaction | null> {
   try {
-    // Trong môi trường thực tế, đây là nơi sẽ gọi API của TON để xác minh giao dịch
-    console.log(`Verifying transaction: ${txHash}`);
-    
-    // Vì đây là phiên bản demo, giả định mọi giao dịch đều hợp lệ
-    // Trong triển khai thực tế, sẽ kiểm tra chi tiết bằng API của TON
-    
-    // Tìm kiếm trong danh sách giao dịch đang chờ xử lý
-    const pendingTx = pendingTransactions.find(tx => tx.txHash === txHash);
-    
-    if (pendingTx) {
-      return {
-        txHash,
-        fromAddress: "User Address", // Trong thực tế sẽ lấy từ blockchain
-        toAddress: GAME_WALLET_ADDRESS,
-        amount: pendingTx.amount,
-        timestamp: pendingTx.timestamp,
-        confirmed: true
-      };
+    console.log(`Verifying transaction: ${txHash} using Toncenter API`);
+
+    if (!TONCENTER_API_KEY_MAINNET) {
+      console.error("TONCENTER_API_KEY_MAINNET is not set.");
+      return null;
     }
-    
-    // Mô phỏng kết quả từ API (để kiểm tra chức năng)
-    // Trong thực tế, dữ liệu này sẽ đến từ blockchain
+
+    // Call Toncenter API to get transaction details
+    const response = await fetch(TONCENTER_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-Key': TONCENTER_API_KEY_MAINNET
+      },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 1,
+        method: "getTransactions",
+        params: {
+          address: GAME_WALLET_ADDRESS,
+          limit: 10, // Check last 10 transactions of game wallet
+          hash: txHash, // Look for specific transaction hash
+          // Lt: "", // Optional: for pagination
+          // archival: false
+        }
+      })
+    });
+
+    const data: ToncenterResponse = await response.json() as ToncenterResponse;
+
+    if (data.error) {
+      console.error("Toncenter API Error:", data.error);
+      return null;
+    }
+
+    const transactions = data.result;
+
+    if (!transactions || transactions.length === 0) {
+      console.log(`Transaction ${txHash} not found on blockchain or not for game wallet.`);
+      return null;
+    }
+
+    const targetTx = transactions.find((tx: ToncenterTxResult) => tx.transaction_id.hash === txHash);
+
+    if (!targetTx) {
+      console.log(`Transaction ${txHash} found in list but hash mismatch.`);
+      return null;
+    }
+
+    const inMsg = targetTx.in_msg;
+    if (!inMsg || inMsg.msg_type !== 'external') { // Should be external in case of deposit
+      console.log(`Transaction ${txHash} is not a valid incoming message.`);
+      return null;
+    }
+
+    const amountNano = inMsg.value;
+    const amountTon = nanoToTon(amountNano);
+    const fromAddress = inMsg.source;
+    const toAddress = inMsg.destination;
+    const timestamp = targetTx.utime * 1000; // Convert to milliseconds
+
+    // Verify destination address and amount (optional but recommended)
+    if (toAddress !== GAME_WALLET_ADDRESS) {
+      console.error(`Transaction ${txHash} destination address mismatch. Expected ${GAME_WALLET_ADDRESS}, got ${toAddress}`);
+      return null;
+    }
+
+    // For now, consider any found transaction confirmed if it matches. 
+    // In a real scenario, you might check if the transaction is final.
     return {
-      txHash,
-      fromAddress: "EQABCDEfghi...", // Địa chỉ ví người gửi 
-      toAddress: GAME_WALLET_ADDRESS, // Địa chỉ ví game (phải khớp)
-      amount: 0.1, // TON (mặc định nếu không tìm thấy)
-      timestamp: Date.now(),
-      confirmed: true
+      txHash: txHash,
+      fromAddress: fromAddress,
+      toAddress: toAddress,
+      amount: amountTon,
+      timestamp: timestamp,
+      confirmed: true // Assume confirmed if found
     };
+
   } catch (error) {
-    console.error("Error verifying transaction:", error);
+    console.error("Error verifying transaction with Toncenter:", error);
     return null;
   }
 }
