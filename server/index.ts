@@ -129,11 +129,20 @@ app.use((req, res, next) => {
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+    console.error('[Global Error Handler] Caught error:', err); // Log the error
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
 
+    // Check if headers have already been sent before trying to send a response
+    if (res.headersSent) {
+      console.error('[Global Error Handler] Headers already sent, cannot send error response.');
+      // If headers are sent, delegate to the default Express error handler
+      // which will close the connection and possibly log the error.
+      return _next(err);
+    }
+
     res.status(status).json({ message });
-    throw err;
+    // Do NOT throw err; here or call _next(err) if you've handled the response.
   });
 
   // importantly only setup vite in development and after
