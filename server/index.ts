@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
-import path from 'path';
+// import path from 'path'; // Removed, was duplicated and unused in this context
 import { setupVite, log } from "./vite";
 import { startBot, bot } from "./telegram-bot";
 import { startTransactionMonitor } from "./transaction-monitor";
@@ -9,6 +9,7 @@ import cors from 'cors';
 import session from 'express-session';
 import connectPgSimple from 'connect-pg-simple';
 import { Pool } from 'pg';
+// import fs from 'fs'; // Removed, unused in this context
 import webhookRouter from "./webhook";
 import authRouter from "./api/auth";
 import chestRouter from "./api/chest";
@@ -52,9 +53,9 @@ app.use(cors({
 
 // Session middleware setup
 const PgStore = connectPgSimple(session);
+
 const pool = new Pool({
-  // Force SSL mode by appending it to the connection string for Render
-  connectionString: `${process.env.DATABASE_URL}?sslmode=no-verify`,
+  connectionString: process.env.DATABASE_URL, // Rely solely on PGSSLMODE env var on Render for SSL
 });
 
 const sessionStore = new PgStore({

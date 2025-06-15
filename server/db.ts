@@ -1,6 +1,8 @@
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import * as schema from '../shared/schema';
+// import fs from 'fs'; // Removed, unused
+// import path from 'path'; // Removed, unused
 
 if (!process.env.DATABASE_URL) {
   throw new Error(
@@ -8,7 +10,5 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-// Force SSL mode by appending it to the connection string for Render
-const connectionString = `${process.env.DATABASE_URL!}?sslmode=no-verify`;
-const client = postgres(connectionString);
+const client = postgres(process.env.DATABASE_URL!); // Rely solely on PGSSLMODE env var on Render for SSL
 export const db = drizzle(client, { schema });
