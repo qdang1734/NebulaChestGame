@@ -8,6 +8,7 @@ import { startTransactionMonitor } from "./transaction-monitor";
 import cors from 'cors';
 import session from 'express-session';
 import connectPgSimple from 'connect-pg-simple';
+import { Pool } from 'pg';
 import webhookRouter from "./webhook";
 import authRouter from "./api/auth";
 import chestRouter from "./api/chest";
@@ -51,8 +52,13 @@ app.use(cors({
 
 // Session middleware setup
 const PgStore = connectPgSimple(session);
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+});
+
 const sessionStore = new PgStore({
-  conString: process.env.DATABASE_URL,
+  pool: pool,
   createTableIfMissing: true,
 });
 
