@@ -252,6 +252,8 @@ const Home = () => {
             }),
           });
           const data = await res.json();
+          console.log("Login API response data:", data);
+          console.log("Token received from login API:", data.token);
           if (data && data.user) {
             setUser(data.user);
             if (data.token) {
