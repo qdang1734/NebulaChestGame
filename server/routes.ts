@@ -180,8 +180,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // TON Connect manifest handlers - support both paths for compatibility
+  const publicBaseUrl = process.env.BASE_URL || process.env.FRONTEND_URL || `https://nebulachestgame.onrender.com`;
   const tonConnectManifest = {
-    url: "https://0df6e7a7-b20d-4f26-a61c-195fdadf8818-00-3t7u5xjgmjgwx.pike.replit.dev",
+    url: publicBaseUrl,
     name: "NebulaChest",
     iconUrl: "/icon.png",
     termsOfUseUrl: "/terms.html",
