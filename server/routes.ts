@@ -405,35 +405,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Initialize egg types
       const eggTypeData = [
         {
-          name: "Mini Egg",
+          name: "Mini Chest",
           price: 0.1,
-          minEarnPerDay: 0.0001,
+          minEarnPerDay: 0.0002,
           maxEarnPerDay: 0.1,
-          description: "The cheapest egg with basic rewards",
+          description: "Mini Chest - rẻ nhất, phần thưởng cơ bản",
           color: "#A7D7C9"
         },
         {
-          name: "Starter Egg",
+          name: "Starter Chest",
           price: 1,
-          minEarnPerDay: 0.001,
-          maxEarnPerDay: 0.5,
-          description: "A balanced egg with medium rewards", 
+          minEarnPerDay: 0.002,
+          maxEarnPerDay: 1,
+          description: "Starter Chest - cân bằng, phần thưởng trung bình", 
           color: "#F2C879"
         },
         {
-          name: "Mega Egg",
+          name: "Pro Chest",
           price: 10,
-          minEarnPerDay: 0.01,
-          maxEarnPerDay: 1,
-          description: "Premium egg with high rewards",
+          minEarnPerDay: 0.015,
+          maxEarnPerDay: 5,
+          description: "Pro Chest - phần thưởng cao",
           color: "#EF959C"
         },
         {
-          name: "Genesis Egg",
+          name: "Genesis Chest",
           price: 100,
-          minEarnPerDay: 0.1,
-          maxEarnPerDay: 10,
-          description: "The ultimate egg with exceptional rewards",
+          minEarnPerDay: 1,
+          maxEarnPerDay: 50,
+          description: "Genesis Chest - phần thưởng cực lớn",
           color: "#69A2B0"
         }
       ];
@@ -446,276 +446,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
         eggTypeIds[insertedEggType.name] = Number(insertedEggType.id);
       }
 
-      // Initialize kitties for each egg type
+      // Initialize kitties for each chest type
       const kittyData = [
-        // Mini Egg Kitties
-        {
-          name: "Fluffy",
-          rarity: "Common",
-          earnPerDay: 0.0002,
-          dropRate: 40,
-          eggTypeId: eggTypeIds["Mini Egg"],
-          color: "#E8D7F1",
-          spotColor: "#A167A5"
-        },
-        {
-          name: "Meowster",
-          rarity: "Common",
-          earnPerDay: 0.0005,
-          dropRate: 35,
-          eggTypeId: eggTypeIds["Mini Egg"],
-          color: "#BEA8E1",
-          spotColor: "#8559A5"
-        },
-        {
-          name: "Stripey",
-          rarity: "Rare",
-          earnPerDay: 0.0035,
-          dropRate: 15,
-          eggTypeId: eggTypeIds["Mini Egg"],
-          color: "#9479CF",
-          spotColor: "#6B43C9"
-        },
-        {
-          name: "Luna",
-          rarity: "Epic",
-          earnPerDay: 0.01,
-          dropRate: 7,
-          eggTypeId: eggTypeIds["Mini Egg"],
-          color: "#6A5ACD",
-          spotColor: "#483D8B"
-        },
-        {
-          name: "Glitch",
-          rarity: "Epic",
-          earnPerDay: 0.02,
-          dropRate: 2,
-          eggTypeId: eggTypeIds["Mini Egg"],
-          color: "#5A4FCF",
-          spotColor: "#4338CA"
-        },
-        {
-          name: "Phantom",
-          rarity: "Legendary",
-          earnPerDay: 0.1,
-          dropRate: 1,
-          eggTypeId: eggTypeIds["Mini Egg"],
-          color: "#4338CA",
-          spotColor: "#3730A3"
-        },
+        // Mini Chest Kitties
+        { name: "Fluffy", rarity: "Common", earnPerDay: 0.0002, dropRate: 40, eggTypeId: eggTypeIds["Mini Chest"], color: "#E8D7F1", spotColor: "#A167A5" },
+        { name: "Meowster", rarity: "Common", earnPerDay: 0.0005, dropRate: 35, eggTypeId: eggTypeIds["Mini Chest"], color: "#BEA8E1", spotColor: "#8559A5" },
+        { name: "Stripey", rarity: "Rare", earnPerDay: 0.0035, dropRate: 15, eggTypeId: eggTypeIds["Mini Chest"], color: "#9479CF", spotColor: "#6B43C9" },
+        { name: "Luna", rarity: "Epic", earnPerDay: 0.01, dropRate: 7, eggTypeId: eggTypeIds["Mini Chest"], color: "#6A5ACD", spotColor: "#483D8B" },
+        { name: "Glitch", rarity: "Epic", earnPerDay: 0.02, dropRate: 2, eggTypeId: eggTypeIds["Mini Chest"], color: "#5A4FCF", spotColor: "#4338CA" },
+        { name: "Phantom", rarity: "Legendary", earnPerDay: 0.1, dropRate: 1, eggTypeId: eggTypeIds["Mini Chest"], color: "#4338CA", spotColor: "#3730A3" },
 
-        // Starter Egg Kitties
-        {
-          name: "Tofu",
-          rarity: "Common",
-          earnPerDay: 0.002,
-          dropRate: 35,
-          eggTypeId: eggTypeIds["Starter Egg"],
-          color: "#F8E8A6",
-          spotColor: "#F2C879"
-        },
-        {
-          name: "Boba",
-          rarity: "Common",
-          earnPerDay: 0.005,
-          dropRate: 30,
-          eggTypeId: eggTypeIds["Starter Egg"],
-          color: "#F8DA7F",
-          spotColor: "#F4C14F"
-        },
-        {
-          name: "Ash",
-          rarity: "Rare",
-          earnPerDay: 0.035,
-          dropRate: 15,
-          eggTypeId: eggTypeIds["Starter Egg"],
-          color: "#F5C759",
-          spotColor: "#E8AE2D"
-        },
-        {
-          name: "Miso",
-          rarity: "Epic",
-          earnPerDay: 0.1,
-          dropRate: 10,
-          eggTypeId: eggTypeIds["Starter Egg"],
-          color: "#F4BC36",
-          spotColor: "#E8A317"
-        },
-        {
-          name: "Orion",
-          rarity: "Epic",
-          earnPerDay: 0.2,
-          dropRate: 5,
-          eggTypeId: eggTypeIds["Starter Egg"],
-          color: "#F0B014",
-          spotColor: "#E09204"
-        },
-        {
-          name: "Phantom",
-          rarity: "Legendary",
-          earnPerDay: 0.1,
-          dropRate: 3,
-          eggTypeId: eggTypeIds["Starter Egg"],
-          color: "#4338CA",
-          spotColor: "#3730A3"
-        },
-        {
-          name: "Crystal",
-          rarity: "Legendary",
-          earnPerDay: 0.35,
-          dropRate: 2,
-          eggTypeId: eggTypeIds["Starter Egg"],
-          color: "#D1A517",
-          spotColor: "#C69214"
-        },
+        // Starter Chest Kitties
+        { name: "Tofu", rarity: "Common", earnPerDay: 0.002, dropRate: 35, eggTypeId: eggTypeIds["Starter Chest"], color: "#F8E8A6", spotColor: "#F2C879" },
+        { name: "Boba", rarity: "Common", earnPerDay: 0.005, dropRate: 30, eggTypeId: eggTypeIds["Starter Chest"], color: "#F8DA7F", spotColor: "#F4C14F" },
+        { name: "Ash", rarity: "Rare", earnPerDay: 0.035, dropRate: 15, eggTypeId: eggTypeIds["Starter Chest"], color: "#F5C759", spotColor: "#E8AE2D" },
+        { name: "Miso", rarity: "Epic", earnPerDay: 0.1, dropRate: 10, eggTypeId: eggTypeIds["Starter Chest"], color: "#F4BC36", spotColor: "#E8A317" },
+        { name: "Orion", rarity: "Epic", earnPerDay: 0.2, dropRate: 5, eggTypeId: eggTypeIds["Starter Chest"], color: "#F0B014", spotColor: "#E09204" },
+        { name: "Phantom", rarity: "Legendary", earnPerDay: 0.1, dropRate: 3, eggTypeId: eggTypeIds["Starter Chest"], color: "#4338CA", spotColor: "#3730A3" },
+        { name: "Crystal", rarity: "Legendary", earnPerDay: 1, dropRate: 0.5, eggTypeId: eggTypeIds["Starter Chest"], color: "#D1A517", spotColor: "#C69214" },
 
-        // Mega Egg Kitties
-        {
-          name: "Biscuit",
-          rarity: "Common",
-          earnPerDay: 0.015,
-          dropRate: 30,
-          eggTypeId: eggTypeIds["Mega Egg"],
-          color: "#F9C6C6",
-          spotColor: "#F08080"
-        },
-        {
-          name: "Mochi",
-          rarity: "Common",
-          earnPerDay: 0.025,
-          dropRate: 25,
-          eggTypeId: eggTypeIds["Mega Egg"],
-          color: "#F7B1B1",
-          spotColor: "#E76A6A"
-        },
-        {
-          name: "Onyx",
-          rarity: "Rare",
-          earnPerDay: 0.075,
-          dropRate: 20,
-          eggTypeId: eggTypeIds["Mega Egg"],
-          color: "#F59A9A",
-          spotColor: "#E05858"
-        },
-        {
-          name: "Salem",
-          rarity: "Rare",
-          earnPerDay: 0.05,
-          dropRate: 15,
-          eggTypeId: eggTypeIds["Genesis Egg"],
-          color: "#F48282",
-          spotColor: "#D84545"
-        },
-        {
-          name: "Vega",
-          rarity: "Epic",
-          earnPerDay: 0.35,
-          dropRate: 5,
-          eggTypeId: eggTypeIds["Genesis Egg"],
-          color: "#F26B6B",
-          spotColor: "#D13030"
-        },
-        {
-          name: "Ghost",
-          rarity: "Epic",
-          earnPerDay: 0.2,
-          dropRate: 3,
-          eggTypeId: eggTypeIds["Genesis Egg"],
-          color: "#EF5050",
-          spotColor: "#CB2020"
-        },
-        {
-          name: "Solar",
-          rarity: "Legendary",
-          earnPerDay: 0.75,
-          dropRate: 1.5,
-          eggTypeId: eggTypeIds["Genesis Egg"],
-          color: "#E84040",
-          spotColor: "#BF1E1E"
-        },
-        {
-          name: "Eclipse",
-          rarity: "Mythic",
-          earnPerDay: 1.0,
-          dropRate: 0.5,
-          eggTypeId: eggTypeIds["Genesis Egg"],
-          color: "#DF2020",
-          spotColor: "#B50E0E"
-        },
+        // Pro Chest Kitties
+        { name: "Biscuit", rarity: "Common", earnPerDay: 0.015, dropRate: 30, eggTypeId: eggTypeIds["Pro Chest"], color: "#F9C6C6", spotColor: "#F08080" },
+        { name: "Mochi", rarity: "Common", earnPerDay: 0.025, dropRate: 25, eggTypeId: eggTypeIds["Pro Chest"], color: "#F7B1B1", spotColor: "#E76A6A" },
+        { name: "Onyx", rarity: "Rare", earnPerDay: 0.075, dropRate: 20, eggTypeId: eggTypeIds["Pro Chest"], color: "#F59A9A", spotColor: "#E05858" },
+        { name: "Salem", rarity: "Rare", earnPerDay: 0.1, dropRate: 15, eggTypeId: eggTypeIds["Pro Chest"], color: "#F48282", spotColor: "#D84545" },
+        { name: "Vega", rarity: "Epic", earnPerDay: 0.5, dropRate: 5, eggTypeId: eggTypeIds["Pro Chest"], color: "#F26B6B", spotColor: "#D13030" },
+        { name: "Ghost", rarity: "Epic", earnPerDay: 0.7, dropRate: 3, eggTypeId: eggTypeIds["Pro Chest"], color: "#EF5050", spotColor: "#CB2020" },
+        { name: "Solar", rarity: "Legendary", earnPerDay: 1, dropRate: 1.5, eggTypeId: eggTypeIds["Pro Chest"], color: "#E84040", spotColor: "#BF1E1E" },
+        { name: "Eclipse", rarity: "Mythic", earnPerDay: 5, dropRate: 0.5, eggTypeId: eggTypeIds["Pro Chest"], color: "#DF2020", spotColor: "#B50E0E" },
 
-        // Genesis Egg Kitties
-        {
-          name: "Nebula",
-          rarity: "Common",
-          earnPerDay: 0.15,
-          dropRate: 30,
-          eggTypeId: eggTypeIds["Genesis Egg"],
-          color: "#A7C4E5",
-          spotColor: "#6D97C9"
-        },
-        {
-          name: "Jade",
-          rarity: "Common",
-          earnPerDay: 0.25,
-          dropRate: 25,
-          eggTypeId: eggTypeIds["Genesis Egg"],
-          color: "#8FB6E0",
-          spotColor: "#5389CA"
-        },
-        {
-          name: "Blaze",
-          rarity: "Rare",
-          earnPerDay: 0.6,
-          dropRate: 20,
-          eggTypeId: eggTypeIds["Genesis Egg"],
-          color: "#78A8DA",
-          spotColor: "#3D7AC2"
-        },
-        {
-          name: "Aqua",
-          rarity: "Rare",
-          earnPerDay: 0.85,
-          dropRate: 15,
-          eggTypeId: eggTypeIds["Genesis Egg"],
-          color: "#619AD5",
-          spotColor: "#2A6DBB"
-        },
-        {
-          name: "Storm",
-          rarity: "Epic",
-          earnPerDay: 2.0,
-          dropRate: 5,
-          eggTypeId: eggTypeIds["Genesis Egg"],
-          color: "#4A8BCE",
-          spotColor: "#1B5EB0"
-        },
-        {
-          name: "Nova",
-          rarity: "Epic",
-          earnPerDay: 3.5,
-          dropRate: 3,
-          eggTypeId: eggTypeIds["Genesis Egg"],
-          color: "#3D7DCB",
-          spotColor: "#1551A3"
-        },
-        {
-          name: "Dragon",
-          rarity: "Legendary",
-          earnPerDay: 6.0,
-          dropRate: 1.5,
-          eggTypeId: eggTypeIds["Genesis Egg"],
-          color: "#306FC8",
-          spotColor: "#0F4595"
-        },
-        {
-          name: "Chronos",
-          rarity: "Mythic",
-          earnPerDay: 10.0,
-          dropRate: 0.5,
-          eggTypeId: eggTypeIds["Genesis Egg"],
-          color: "#2561C0",
-          spotColor: "#0A3984"
-        }
+        // Genesis Chest Kitties
+        { name: "Nebula", rarity: "Common", earnPerDay: 1, dropRate: 30, eggTypeId: eggTypeIds["Genesis Chest"], color: "#A7C4E5", spotColor: "#6D97C9" },
+        { name: "Jade", rarity: "Common", earnPerDay: 2, dropRate: 25, eggTypeId: eggTypeIds["Genesis Chest"], color: "#8FB6E0", spotColor: "#5389CA" },
+        { name: "Blaze", rarity: "Rare", earnPerDay: 5, dropRate: 20, eggTypeId: eggTypeIds["Genesis Chest"], color: "#78A8DA", spotColor: "#3D7AC2" },
+        { name: "Aqua", rarity: "Rare", earnPerDay: 7, dropRate: 15, eggTypeId: eggTypeIds["Genesis Chest"], color: "#619AD5", spotColor: "#2A6DBB" },
+        { name: "Storm", rarity: "Epic", earnPerDay: 10, dropRate: 5, eggTypeId: eggTypeIds["Genesis Chest"], color: "#4A8BCE", spotColor: "#1B5EB0" },
+        { name: "Nova", rarity: "Epic", earnPerDay: 15, dropRate: 3, eggTypeId: eggTypeIds["Genesis Chest"], color: "#3D7DCB", spotColor: "#1551A3" },
+        { name: "Dragon", rarity: "Legendary", earnPerDay: 20, dropRate: 1.5, eggTypeId: eggTypeIds["Genesis Chest"], color: "#306FC8", spotColor: "#0F4595" },
+        { name: "Chronos", rarity: "Mythic", earnPerDay: 50, dropRate: 0.5, eggTypeId: eggTypeIds["Genesis Chest"], color: "#2561C0", spotColor: "#0A3984" },
       ];
 
       // Insert all kitties
