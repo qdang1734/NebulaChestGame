@@ -1,4 +1,16 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import axios from 'axios'; // Import axios
+
+// Configure Axios to include the auth token in all requests
+axios.interceptors.request.use((config) => {
+  const token = localStorage.getItem('authToken');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+}, (error) => {
+  return Promise.reject(error);
+});
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
@@ -34,6 +46,8 @@ export async function apiRequest(
   }
   const fullUrl = `${baseApi}${path}`;
 
+  // For fetch requests, we still need to add headers manually, but axios calls will be covered by interceptor
+  // This part is for the queryFn, which uses fetch. Axios is for direct calls.
   const res = await fetch(fullUrl, {
     method,
     headers,
@@ -59,7 +73,7 @@ export const getQueryFn: <T>(options: {
       // ignore
     }
     
-    // Build headers object
+    // Build headers object - this is for fetch calls via react-query
     const headers: Record<string, string> = {};
     
     if (authToken) {
