@@ -8,16 +8,7 @@ import { users } from '../../shared/schema';
 
 const router = Router();
 
-// A mock user ID for testing purposes when no token is available
-const mockUserId = 1;
 
-/**
- * Extracts a user ID from an Express request object.
- * It checks for a Bearer token in the Authorization header first,
- * then falls back to a 'token' query parameter.
- * @param req The Express Request object.
- * @returns The user ID if the token is valid, otherwise null.
- */
 
 
 
