@@ -79,6 +79,25 @@ app.use(session({
   },
 }));
 
+// Diagnostic middleware to log session and cookie details for every request
+app.use((req, res, next) => {
+  // A simple check to avoid logging for static assets if any are added later
+  if (req.path.includes('.')) {
+    return next();
+  }
+
+  console.log('--- DIAGNOSTIC LOG ---');
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
+  console.log('Request Headers:', {
+    origin: req.headers.origin,
+    cookie: req.headers.cookie, // This is the most important part
+  });
+  // This log runs AFTER the session middleware, so req.session should be populated.
+  console.log('Session Object:', req.session);
+  console.log('Session User ID:', req.session?.userId);
+  next();
+});
+
 // Đăng ký các router API mới
 app.use('/api', authRouter);
 app.use('/api', chestRouter);
