@@ -249,6 +249,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
+            console.log('[DEBUG] Received /api/open-egg request with body:', JSON.stringify(req.body));
       const { eggTypeId } = req.body;
       if (eggTypeId === undefined) {
         return res.status(400).json({ error: "Egg Type ID is required" });
