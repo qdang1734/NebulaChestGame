@@ -1,8 +1,12 @@
 import { Router, type Response } from 'express';
 import { authenticateToken, type AuthRequest } from './middleware';
 import { storage } from '../storage';
+import { z } from 'zod';
 
-import { insertEggSchema } from '../schema';
+// Schema để xác thực dữ liệu khi mua trứng
+const buyEggSchema = z.object({
+  eggTypeId: z.number(),
+});
 
 const router = Router();
 
@@ -21,7 +25,7 @@ router.get('/eggs', authenticateToken, async (req: AuthRequest, res: Response) =
   }
 });
 
-// API tạo một quả trứng mới cho người dùng
+// API tạo một quả trứng mới cho người dùng (mua trứng)
 router.post('/eggs', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.id;
@@ -29,15 +33,19 @@ router.post('/eggs', authenticateToken, async (req: AuthRequest, res: Response) 
       return res.status(401).json({ error: 'User not authenticated' });
     }
 
-    // Use the authenticated user's ID, ignoring any userId in the body.
-    const eggData = { ...req.body, userId };
-
-    const parsed = insertEggSchema.safeParse(eggData);
+    // Xác thực body của request
+    const parsed = buyEggSchema.safeParse(req.body);
     if (!parsed.success) {
-      return res.status(400).json({ error: "Invalid egg data", details: parsed.error.flatten() });
+      return res.status(400).json({ error: "Dữ liệu không hợp lệ: eggTypeId là bắt buộc và phải là một con số.", details: parsed.error.flatten() });
     }
 
-    const newEgg = await storage.createEgg(parsed.data);
+    // Chuẩn bị dữ liệu để tạo trứng mới
+    const eggToCreate = {
+      userId,
+      eggTypeId: parsed.data.eggTypeId,
+    };
+
+    const newEgg = await storage.createEgg(eggToCreate);
     res.status(201).json(newEgg);
   } catch (error) {
     console.error("Error creating egg:", error);
