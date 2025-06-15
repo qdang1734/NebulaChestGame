@@ -211,6 +211,12 @@ const defaultKittiesByEggId: Record<number, Kitty[]> = {
 
 
 const Home = () => {
+  // Khai báo lại các state cần thiết cho UI, loại bỏ feBalance
+  const [isOpeningEgg, setIsOpeningEgg] = useState(false);
+  const [openedKitty, setOpenedKitty] = useState<Kitty | null>(null);
+  const [feCollection, setFeCollection] = useState<KittyWithCount[]>([]);
+  const [feDailyReward, setFeDailyReward] = useState(0);
+  const [feTotalReward, setFeTotalReward] = useState(0);
   // ...existing states
   const [inviteRewardHistory, setInviteRewardHistory] = useState<InviteRewardItem[]>([]);
   const [loadingInviteHistory, setLoadingInviteHistory] = useState(false);
@@ -353,15 +359,6 @@ const Home = () => {
     }
   }, [currentEgg, currentEggId, queryClient]);
 
-  // FE balance, sync with Wallet/Home
-  const [feBalance, setFeBalance] = useState(10000);
-  // Handle egg opening
-  const [isOpeningEgg, setIsOpeningEgg] = useState(false);
-  const [openedKitty, setOpenedKitty] = useState<Kitty | null>(null);
-  // FE collection and reward
-  const [feCollection, setFeCollection] = useState<KittyWithCount[]>([]);
-  const [feDailyReward, setFeDailyReward] = useState(0);
-  const [feTotalReward, setFeTotalReward] = useState(0);
   // Thời điểm mở rương đầu tiên (timestamp ms)
   const [firstOpenTime, setFirstOpenTime] = useState<number | null>(null);
   // Countdown claim
@@ -376,8 +373,6 @@ const Home = () => {
       const left = 24 * 3600 * 1000 - elapsed;
       setClaimCountdown(left > 0 ? left : 0);
       if (left <= 0 && feDailyReward > 0) {
-        setFeBalance(b => b + feDailyReward);
-        setFeTotalReward(r => r + feDailyReward);
         const next = now;
         setFirstOpenTime(next);
         localStorage.setItem('firstOpenTime', next.toString());
@@ -422,7 +417,7 @@ const Home = () => {
   const handleOpenEgg = async (event: React.MouseEvent<HTMLButtonElement>) => {
     if (!currentEggId || isOpeningEgg) return;
     const eggPrice = eggs[currentEgg]?.price || 0;
-    if (feBalance < eggPrice) {
+    if ((userData?.balance ?? 0) < eggPrice) {
       setErrorMessage('Not enough balance to open this chest');
       return;
     }
@@ -459,7 +454,6 @@ const Home = () => {
             }
           }
           setOpenedKitty(selected);
-          setFeBalance((b) => b - eggPrice);
           setFeCollection((prev: KittyWithCount[]) => {
             const idx = prev.findIndex((k) => k.id === selected.id);
             let newCollection;
@@ -551,7 +545,7 @@ const handleNextEgg = () => {
           <div className="text-sm text-gray-300 mb-1 font-medium">{t('balance')}</div>
           <div className="text-xl font-display font-bold text-amber-500 flex items-center justify-center">
             <img src={tonLogo} alt="TON" className="w-6 h-6 mr-1" />
-            <span>{feBalance.toFixed(3)}</span>
+            <span>{(userData?.balance ?? 0).toFixed(3)}</span>
           </div>
         </div>
         

@@ -81,8 +81,8 @@ const Wallet = ({ onScreenChange }: WalletProps) => {
   const [isConnecting, setIsConnecting] = useState<boolean>(false);
   const [isConnected, setIsConnected] = useState<boolean>(false);
   
-  // Hiển thị số dư tạm thời là 10000 TON
-  const tonBalance = 10000;
+  // Thay thế các biến số dư demo
+  const tonBalance = userData?.balance ?? 0;
   const usdBalance = (tonBalance * TON_TO_USD_RATE).toFixed(2);
   const walletUsdBalance = (walletBalance * TON_TO_USD_RATE).toFixed(2);
   
