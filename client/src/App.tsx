@@ -15,6 +15,7 @@ import Withdraw from "./pages/Withdraw";
 import Profile from "./pages/Profile";
 import { ActiveScreen } from "./lib/types";
 import backgroundImage from '@assets/background.png';
+import { setAuthTokenForApi } from './lib/queryClient';
 
 function App() {
   const [activeScreen, setActiveScreen] = useState<ActiveScreen>("home");
@@ -28,6 +29,7 @@ function App() {
     
     if (tokenFromUrl) {
       setAuthToken(tokenFromUrl);
+      setAuthTokenForApi(tokenFromUrl);
       // Store token in localStorage for persistence across page refreshes
       localStorage.setItem('authToken', tokenFromUrl);
       
@@ -44,6 +46,7 @@ function App() {
       const storedToken = localStorage.getItem('authToken');
       if (storedToken) {
         setAuthToken(storedToken);
+        setAuthTokenForApi(storedToken);
       }
     }
   }, []);
@@ -51,9 +54,6 @@ function App() {
   // Add token to all API requests
   useEffect(() => {
     if (authToken) {
-      // Configure axios or fetch default headers
-      // This will be handled by the queryClient in lib/queryClient.ts
-      
       // For debugging
       console.log("User authenticated with Telegram token");
     }

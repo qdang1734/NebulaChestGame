@@ -1,11 +1,16 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 import axios from 'axios'; // Import axios
 
+let currentAuthToken: string | null = null; // Biến để lưu trữ token hiện tại
+
+export function setAuthTokenForApi(token: string | null) {
+  currentAuthToken = token;
+}
+
 // Configure Axios to include the auth token in all requests
 axios.interceptors.request.use((config) => {
-  const token = localStorage.getItem('authToken');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+  if (currentAuthToken) {
+    config.headers.Authorization = `Bearer ${currentAuthToken}`;
   }
   return config;
 }, (error) => {
@@ -65,19 +70,11 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    // Get auth token from localStorage if available
-    let authToken: string | null = null;
-    try {
-      authToken = localStorage.getItem('authToken');
-    } catch (_) {
-      // ignore
-    }
-    
     // Build headers object - this is for fetch calls via react-query
     const headers: Record<string, string> = {};
     
-    if (authToken) {
-      headers["Authorization"] = `Bearer ${authToken}`;
+    if (currentAuthToken) { // Sử dụng currentAuthToken thay vì localStorage
+      headers["Authorization"] = `Bearer ${currentAuthToken}`;
     }
     
     const baseApi = import.meta.env.VITE_API_URL || 'https://nebulachestgamebackend.onrender.com';
