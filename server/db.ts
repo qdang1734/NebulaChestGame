@@ -10,5 +10,9 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-const client = postgres(process.env.DATABASE_URL!); // Rely solely on PGSSLMODE env var on Render for SSL
+const client = postgres(process.env.DATABASE_URL!, {
+  // Explicitly enable SSL for production on Render, but disable certificate verification.
+  // This is the correct way to achieve 'no-verify' behavior with this library's types.
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : undefined,
+});
 export const db = drizzle(client, { schema });
