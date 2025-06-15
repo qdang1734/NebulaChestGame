@@ -1,11 +1,21 @@
 import 'dotenv/config';
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
+import path from 'path';
 import { setupVite, log } from "./vite";
 import { startBot } from "./telegram-bot";
 import { startTransactionMonitor } from "./transaction-monitor";
 import cors from 'cors';
 import webhookRouter from "./webhook";
+import authRouter from "./api/auth";
+import chestRouter from "./api/chest";
+import inviteRouter from "./api/invite";
+import eggTypesRouter from "./api/egg-types";
+import kittiesRouter from "./api/kitties";
+import eggsRouter from "./api/eggs";
+import openEggRouter from "./api/open-egg";
+import userKittiesRouter from "./api/user-kitties";
+import rewardsRouter from "./api/rewards";
 
 // Ensure Express runs in production mode on Render when NODE_ENV may be undefined
 if (!process.env.NODE_ENV) {
@@ -21,6 +31,17 @@ app.use(cors({
   origin: process.env.FRONTEND_URL || 'https://nebulachestgame.onrender.com',
   credentials: true,
 }));
+
+// Đăng ký các router API mới
+app.use('/api', authRouter);
+app.use('/api', chestRouter);
+app.use('/api', inviteRouter);
+app.use('/api', eggTypesRouter);
+app.use('/api', kittiesRouter);
+app.use('/api', eggsRouter);
+app.use('/api', openEggRouter);
+app.use('/api', userKittiesRouter);
+app.use('/api', rewardsRouter);
 
 // Sử dụng webhook router cho các endpoints Telegram
 app.use('/', webhookRouter);
@@ -69,8 +90,23 @@ app.use((req, res, next) => {
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes
+  // importantly only setup vite in development and after
+  // setting up all the other routes so the catch-all route
+  // doesn't interfere with the other routes
   if (process.env.NODE_ENV === "development") {
     await setupVite(app, server);
+  } else {
+    // In production, serve the static files from the client build directory
+    // Note: We use process.cwd() which is reliable when 'npm start' is run from the project root.
+    const clientBuildPath = path.resolve(process.cwd(), 'client/dist');
+    
+    app.use(express.static(clientBuildPath));
+
+    // For any request that doesn't match a static file or API route, 
+    // send back the main index.html file. This is essential for single-page applications.
+    app.get('*', (req, res) => {
+      res.sendFile(path.resolve(clientBuildPath, 'index.html'));
+    });
   }
 
   // Use PORT from environment variable if available, otherwise use 5000

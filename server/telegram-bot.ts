@@ -1,6 +1,35 @@
 import { Telegraf, Context } from 'telegraf';
 import { storage } from './storage';
 import { InsertUser } from './schema';
+import { Request } from 'express';
+
+// A mock user ID for testing purposes when no token is available
+export const mockUserId = 1;
+
+/**
+ * Extracts a user ID from an Express request object.
+ * It checks for a Bearer token in the Authorization header first,
+ * then falls back to a 'token' query parameter.
+ * @param req The Express Request object.
+ * @returns The user ID if the token is valid, otherwise null.
+ */
+export function getUserIdFromAuth(req: Request): number | null {
+  const authHeader = req.headers.authorization;
+  let token = '';
+
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    token = authHeader.substring(7);
+  } else if (req.query.token) {
+    token = req.query.token as string;
+  }
+
+  if (!token) {
+    return null;
+  }
+
+  const userSession = validateAuthToken(token);
+  return userSession ? userSession.userId : null;
+}
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '7958696875:AAFD4wI0Fh54m8v9jDDdkZgFEKlLNT-xie4';
 // Base URL for generating Telegram WebApp deep links
