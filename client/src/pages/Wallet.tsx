@@ -24,7 +24,7 @@ import { TonConnectUI } from "@tonconnect/ui";
 // Create proper connection to TON Connect
 // We don't need a buttonRootId since we're using custom buttons
 export const tonConnectUI = new TonConnectUI({
-  manifestUrl: "https://0df6e7a7-b20d-4f26-a61c-195fdadf8818-00-3t7u5xjgmjgwx.pike.replit.dev/tonconnect-manifest.json",
+  manifestUrl: "https://nebulachestgame.onrender.com/tonconnect-manifest.json",
 });
 
 // Create a wrapper with error handling
@@ -129,39 +129,11 @@ const Wallet = ({ onScreenChange }: WalletProps) => {
   
   // Handle wallet connection through TON Space
   const handleConnectWallet = async () => {
-    setIsConnecting(true);
-    
-    try {
-      // Attempt to connect to TON wallet
-      await tonWallet.connect();
-      
-      // Check if connected after user interaction
-      if (tonWallet.connected && tonConnectUI.wallet) {
-        // Get actual wallet address if available
-        const address = tonConnectUI.wallet.account.address;
-        setWalletAddress(address ? 
-          `${address.slice(0, 6)}...${address.slice(-4)}` : // Show truncated address for privacy
-          "Connected"
-        );
-        setWalletBalance(0); // Actual balance would require separate API call
-        setIsConnected(true);
-      }
-    } catch (err) {
-      console.error("Error connecting wallet:", err);
-    } finally {
-      setIsConnecting(false);
-    }
+    window.open('https://app.tonkeeper.com/ton-connect?manifestUrl=https://nebulachestgame.onrender.com/tonconnect-manifest.json', '_blank');
   };
   
   const handleDeposit = async () => {
-    if (!isConnected) {
-      // Prompt to connect wallet first
-      handleConnectWallet();
-      return;
-    }
-    
-    // Navigate to deposit screen
-    onScreenChange("deposit");
+    window.open('https://app.tonkeeper.com/ton-connect?manifestUrl=https://nebulachestgame.onrender.com/tonconnect-manifest.json', '_blank');
   };
   
   const handleWithdraw = async () => {
