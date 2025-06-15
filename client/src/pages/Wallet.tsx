@@ -4,6 +4,18 @@ import GradientButton from "@/components/ui/gradient-button";
 import { ActiveScreen } from "@/lib/types";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import tonLogo from "@assets/ton_symbol_1746668225277.png";
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogClose,
+  DialogDescription
+} from '@/components/ui/dialog';
+import axios from 'axios';
+import { sendTransaction as sendTonTransaction } from '../lib/ton-helper';
 
 interface WalletProps {
   onScreenChange: (screen: ActiveScreen) => void;
@@ -70,6 +82,10 @@ export const tonWallet = {
   }
 };
 
+const GAME_WALLET_ADDRESS = "UQDf_BlFDdYBVUudGOVCJ846issTL-mLpW6QfC93lg5MrbiY";
+const MIN_DEPOSIT = 0.1;
+const MAX_DEPOSIT = 10000;
+
 const Wallet = ({ onScreenChange }: WalletProps) => {
   const { data: userData, isLoading } = useQuery<UserData>({
     queryKey: ['/api/user'],
@@ -80,6 +96,12 @@ const Wallet = ({ onScreenChange }: WalletProps) => {
   const [walletBalance, setWalletBalance] = useState<number>(0);
   const [isConnecting, setIsConnecting] = useState<boolean>(false);
   const [isConnected, setIsConnected] = useState<boolean>(false);
+  const [depositModalOpen, setDepositModalOpen] = useState(false);
+  const [depositAmount, setDepositAmount] = useState(0.1);
+  const [depositStep, setDepositStep] = useState<'input'|'sending'|'waiting'|'success'|'error'>("input");
+  const [depositError, setDepositError] = useState<string | null>(null);
+  const [txHash, setTxHash] = useState<string | null>(null);
+  const [polling, setPolling] = useState(false);
   
   // Thay thế các biến số dư demo
   const tonBalance = userData?.balance ?? 0;
@@ -139,14 +161,67 @@ const Wallet = ({ onScreenChange }: WalletProps) => {
   
   const handleDeposit = async () => {
     if (!isConnected) {
-      // Nếu chưa kết nối ví thì mở bảng kết nối
       await handleConnectWallet();
       return;
     }
-    // Nếu đã kết nối ví, thực hiện logic nạp tiền ở đây
-    // Ví dụ: mở modal hướng dẫn nạp, hoặc gửi transaction
-    alert("Đã kết nối ví. Thực hiện logic nạp tiền ở đây.");
+    setDepositModalOpen(true);
+    setDepositStep('input');
+    setDepositError(null);
+    setDepositAmount(0.1);
+    setTxHash(null);
   };
+  
+  const sendDepositTx = async () => {
+    setDepositStep('sending');
+    setDepositError(null);
+    try {
+      // Gửi transaction qua TON Connect
+      const amountNano = BigInt(Math.floor(depositAmount * 1e9)).toString();
+      const params = {
+        value: amountNano,
+        to: GAME_WALLET_ADDRESS
+      };
+      // Gửi transaction và lấy txHash (boc)
+      const result = await sendTonTransaction(params);
+      if (!result) {
+        setDepositStep('error');
+        setDepositError('Không lấy được txHash từ ví.');
+        return;
+      }
+      setTxHash(result);
+      setDepositStep('waiting');
+      // Gọi API backend để đăng ký giao dịch
+      const userId = userData?.id;
+      const fromAddress = tonConnectUI.wallet?.account?.address;
+      await axios.post('/api/deposit/register', {
+        userId,
+        txHash: result,
+        amount: depositAmount,
+        fromAddress
+      });
+      setPolling(true);
+    } catch (err: any) {
+      setDepositStep('error');
+      setDepositError(err?.message || 'Gửi giao dịch thất bại.');
+    }
+  };
+  
+  useEffect(() => {
+    let interval: any;
+    if (depositStep === 'waiting' && txHash && polling) {
+      interval = setInterval(async () => {
+        try {
+          const res = await axios.post('/api/deposit/verify', { txHash });
+          if (res.data?.success && res.data?.status === 'confirmed') {
+            setDepositStep('success');
+            setPolling(false);
+            queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+          }
+        } catch {}
+      }, 4000);
+    }
+    return () => interval && clearInterval(interval);
+  }, [depositStep, txHash, polling]);
   
   const handleWithdraw = async () => {
     if (!isConnected) {
@@ -298,6 +373,43 @@ const Wallet = ({ onScreenChange }: WalletProps) => {
           </div>
         )}
       </div>
+      
+      <Dialog open={depositModalOpen} onOpenChange={setDepositModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Nạp TON vào game</DialogTitle>
+            <DialogDescription>
+              Nạp tối thiểu {MIN_DEPOSIT} TON, tối đa {MAX_DEPOSIT} TON.<br/>
+              Tiền sẽ được cộng vào tài khoản game sau khi xác nhận giao dịch trên blockchain.
+            </DialogDescription>
+          </DialogHeader>
+          {depositStep === 'input' && (
+            <div className="space-y-4">
+              <input
+                type="number"
+                min={MIN_DEPOSIT}
+                max={MAX_DEPOSIT}
+                step="0.01"
+                value={depositAmount}
+                onChange={e => setDepositAmount(Math.max(MIN_DEPOSIT, Math.min(MAX_DEPOSIT, Number(e.target.value))))}
+                className="w-full rounded border px-3 py-2 bg-gray-900 text-white"
+              />
+              <GradientButton fullWidth onClick={sendDepositTx}>
+                Xác nhận nạp
+              </GradientButton>
+            </div>
+          )}
+          {depositStep === 'sending' && <div>Đang gửi giao dịch đến ví TON...</div>}
+          {depositStep === 'waiting' && <div>Đang chờ xác nhận giao dịch trên blockchain...</div>}
+          {depositStep === 'success' && <div className="text-green-500">Nạp thành công! Số dư sẽ được cập nhật sau ít phút.</div>}
+          {depositStep === 'error' && <div className="text-red-500">{depositError}</div>}
+          <DialogFooter>
+            <DialogClose asChild>
+              <GradientButton variant="outline">Đóng</GradientButton>
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
