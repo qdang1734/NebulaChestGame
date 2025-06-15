@@ -614,6 +614,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Route tạm thời để reset dữ liệu chest/egg và kitties
+  app.post("/api/admin/reset-chest-data", async (req: Request, res: Response) => {
+    try {
+      await db.delete(kitties);
+      await db.delete(eggTypes);
+      res.json({ success: true, message: "Đã xóa dữ liệu eggTypes và kitties" });
+    } catch (error) {
+      res.status(500).json({ success: false, error: (error instanceof Error ? error.message : String(error)) });
+    }
+  });
+
   // Khởi động hệ thống theo dõi giao dịch nạp tự động
 
 
