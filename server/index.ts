@@ -92,8 +92,8 @@ const secretPath = `/telegraf/${bot.secretPathComponent()}`;
 // Use webhook router for Telegram updates
 app.use(bot.webhookCallback(secretPath));
 
-// Fallback webhook router for other webhooks if any
-app.use('/', webhookRouter);
+// Webhook router for other services (e.g., payment provider)
+app.use('/webhook', webhookRouter);
 
 app.use((req, res, next) => {
   const start = Date.now();
