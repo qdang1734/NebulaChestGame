@@ -193,11 +193,23 @@ const Wallet = ({ onScreenChange }: WalletProps) => {
       // Gọi API backend để đăng ký giao dịch
       const userId = userData?.id;
       const fromAddress = tonConnectUI.wallet?.account?.address;
+      const token = localStorage.getItem('authToken');
+
+      if (!token) {
+        setDepositStep('error');
+        setDepositError('Không tìm thấy token xác thực. Vui lòng đăng nhập lại.');
+        return;
+      }
+
       await axios.post('/api/deposit/register', {
         userId,
         txHash: result,
         amount: depositAmount,
         fromAddress
+      }, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       });
       setPolling(true);
     } catch (err: any) {
