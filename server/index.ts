@@ -72,6 +72,7 @@ app.use(session({
     // Correct settings for cross-origin (cross-domain) cookies
     sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
     secure: process.env.NODE_ENV === 'production', // `secure: true` is required for `sameSite: 'none'`
+    domain: process.env.NODE_ENV === 'production' ? '.onrender.com' : undefined, // Share cookie across subdomains
   },
 }));
 
