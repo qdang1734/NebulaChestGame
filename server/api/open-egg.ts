@@ -26,10 +26,15 @@ const selectRandomKitty = (kitties: Kitty[]): Kitty | null => {
 
 router.post('/open-egg', async (req: Request, res: Response) => {
   try {
-    const { eggId, userId } = req.body;
+    const { eggId } = req.body;
+    const userId = req.session.userId;
 
-    if (!eggId || !userId) {
-      return res.status(400).json({ success: false, error: 'Egg ID and User ID are required' });
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'User not authenticated. Please log in.' });
+    }
+
+    if (!eggId) {
+      return res.status(400).json({ success: false, error: 'Egg ID is required' });
     }
 
     // 1. Fetch the egg and validate it
