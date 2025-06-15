@@ -1,4 +1,5 @@
-import { Router, type Request, type Response } from 'express';
+import { Router, type Response } from 'express';
+import { authenticateToken, type AuthRequest } from './middleware';
 import { storage } from '../storage';
 import type { Kitty } from '../schema';
 
@@ -24,10 +25,10 @@ const selectRandomKitty = (kitties: Kitty[]): Kitty | null => {
   return kitties[kitties.length - 1];
 };
 
-router.post('/open-egg', async (req: Request, res: Response) => {
+router.post('/open-egg', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const { eggId } = req.body;
-    const userId = req.session.userId;
+    const userId = req.user?.id;
 
     if (!userId) {
       return res.status(401).json({ success: false, error: 'User not authenticated. Please log in.' });
