@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
+import { auth } from '../lib/auth';
 
 interface TelegramStatusProps {
   className?: string;
@@ -28,16 +29,16 @@ const TelegramStatus = ({ className }: TelegramStatusProps) => {
     const checkTelegramConnection = async () => {
       try {
         setIsLoading(true);
-        const authToken = localStorage.getItem('authToken');
+        const token = await auth.getToken();
         
-        if (!authToken) {
+        if (!token) {
           setIsConnected(false);
           return;
         }
         
-        const response = await fetch('https://pxiltsic.cloudfly.vn/api/validate-token', {
+        const response = await fetch('https://nebulachestgamebackend.onrender.com/api/validate-token', {
           headers: {
-            'Authorization': `Bearer ${authToken}`
+            'Authorization': `Bearer ${token}`
           }
         });
         
@@ -52,8 +53,7 @@ const TelegramStatus = ({ className }: TelegramStatusProps) => {
           });
         } else {
           setIsConnected(false);
-          // Clear invalid token
-          localStorage.removeItem('authToken');
+          await auth.removeToken();
         }
       } catch (error) {
         console.error('Error checking Telegram connection:', error);

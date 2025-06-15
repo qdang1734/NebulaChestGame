@@ -11,6 +11,8 @@ import { translate } from "@/lib/i18n";
 import TelegramStatus from "@/components/TelegramStatus";
 import ChestRewardsDialog from "@/components/ChestRewardsDialog";
 import InviteRewardHistory, { InviteRewardItem } from '../components/InviteRewardHistory';
+import { auth } from '../lib/auth';
+import { TelegramWebAppUser } from '../lib/types';
 
 // Import kitty images and TON logo
 import fluffy from "@assets/Fluffy.png";
@@ -232,7 +234,7 @@ const Home = () => {
     async function loginTelegram() {
       const apiUrl = import.meta.env.VITE_API_URL || 'https://nebulachestgamebackend.onrender.com';
 
-      if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe.user) {
+      if (window.Telegram?.WebApp?.initDataUnsafe?.user) {
         const tgUser = window.Telegram.WebApp.initDataUnsafe.user;
         const startParam = window.Telegram.WebApp.initDataUnsafe.start_param;
         const { id, first_name, last_name, username, photo_url } = tgUser;
@@ -253,35 +255,15 @@ const Home = () => {
           if (data && data.user) {
             setUser(data.user);
             if (data.token) {
-              localStorage.setItem('authToken', data.token);
+              await auth.setToken(data.token);
             }
           }
         } catch (error) {
           console.error("Failed to login:", error);
         }
-      } else {
-        console.log("Telegram Web App user data not found. Using fallback.");
-        const telegram_id = localStorage.getItem('telegram_id');
-        if (telegram_id) {
-          try {
-            const res = await fetch(`${apiUrl}/api/login`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ telegram_id }),
-            });
-            const data = await res.json();
-            if (data && data.user) {
-              setUser(data.user);
-              if (data.token) {
-                localStorage.setItem('authToken', data.token);
-              }
-            }
-          } catch (error) {
-            console.error("Fallback login failed:", error);
-          }
-        }
       }
     }
+
     loginTelegram();
   }, []);
 

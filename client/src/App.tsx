@@ -16,11 +16,11 @@ import Profile from "./pages/Profile";
 import { ActiveScreen, TelegramWebApp } from "./lib/types";
 import backgroundImage from '@assets/background.png';
 import { setAuthTokenForApi } from './lib/queryClient';
+import { auth } from './lib/auth';
 
 function App() {
   const [activeScreen, setActiveScreen] = useState<ActiveScreen>("home");
   const [previousScreen, setPreviousScreen] = useState<ActiveScreen | null>(null);
-  const [authToken, setAuthToken] = useState<string | null>(null);
 
   // Check if running in Telegram WebApp context safely
   const isTelegramWebApp = typeof window !== 'undefined' && window.Telegram?.WebApp;
@@ -45,73 +45,22 @@ function App() {
 
     if (isTelegramWebApp) {
       window.Telegram?.WebApp?.ready(); // Safely call ready()
-      // Additional setup for WebApp if needed
     }
 
     const urlParams = new URLSearchParams(window.location.search);
     const tokenFromUrl = urlParams.get('token');
 
-    const setAndStoreToken = async (token: string | null) => {
-      setAuthToken(token);
-      setAuthTokenForApi(token);
-      if (isTelegramWebApp && window.Telegram?.WebApp?.CloudStorage) {
-        try {
-          if (token) {
-            await window.Telegram.WebApp.CloudStorage.setItem('authToken', token);
-          } else {
-            await window.Telegram.WebApp.CloudStorage.removeItem('authToken');
-          }
-        } catch (e) {
-          console.error("Error setting token in CloudStorage:", e);
-        }
-      } else {
-        if (token) {
-          localStorage.setItem('authToken', token);
-        } else {
-          localStorage.removeItem('authToken');
-        }
-      }
-    };
-
-    const getStoredToken = async () => {
-      let storedToken: string | null = null;
-      if (isTelegramWebApp && window.Telegram?.WebApp?.CloudStorage) {
-        try {
-          storedToken = await window.Telegram.WebApp.CloudStorage.getItem('authToken');
-        } catch (e) {
-          console.error("Error getting token from CloudStorage:", e);
-        }
-      } else {
-        storedToken = localStorage.getItem('authToken');
-      }
-      return storedToken;
-    };
-
     if (tokenFromUrl) {
-      setAndStoreToken(tokenFromUrl);
-      // Optionally remove token from URL for security
+      auth.setToken(tokenFromUrl);
+      // Remove token from URL for security
       if (window.history && window.history.replaceState) {
         const cleanUrl = window.location.protocol + "//" +
                          window.location.host +
                          window.location.pathname;
         window.history.replaceState({}, document.title, cleanUrl);
       }
-    } else {
-      getStoredToken().then(storedToken => {
-        if (storedToken) {
-          setAuthToken(storedToken);
-          setAuthTokenForApi(storedToken);
-        }
-      });
     }
-  }, [isTelegramWebApp]); // Depend on isTelegramWebApp to re-run if context changes (though unlikely)
-
-  // This useEffect can be simplified/removed later as token is set on mount
-  useEffect(() => {
-    if (authToken) {
-      console.log("User authenticated with Telegram token");
-    }
-  }, [authToken]);
+  }, [isTelegramWebApp]);
 
   const handleScreenChange = (screen: ActiveScreen) => {
     setPreviousScreen(activeScreen);

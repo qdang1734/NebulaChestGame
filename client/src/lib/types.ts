@@ -76,11 +76,13 @@ export interface TelegramCloudStorage {
 
 export interface TelegramWebApp {
   ready: () => void;
-  initDataUnsafe: { // Can be more specific if needed
+  initDataUnsafe: {
     user?: TelegramWebAppUser;
     start_param?: string;
+    auth_date: number;
+    hash: string;
   };
-  CloudStorage?: TelegramCloudStorage; // Make CloudStorage optional here
+  CloudStorage?: TelegramCloudStorage;
   // Add other properties as they are used in the app
   // E.g., expand(), close(), isExpanded, viewportHeight, etc.
 }
@@ -98,7 +100,9 @@ declare global {
             last_name?: string;
             username?: string;
             language_code?: string;
+            photo_url?: string;
           };
+          start_param?: string;
           auth_date: number;
           hash: string;
         };
