@@ -9,7 +9,7 @@ if (!process.env.DATABASE_URL) {
 }
 
 const client = postgres(process.env.DATABASE_URL!, {
-  // Add SSL configuration for production environments like Render
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  // Force SSL config for Render diagnosis, bypassing NODE_ENV check
+  ssl: { rejectUnauthorized: false }, 
 });
 export const db = drizzle(client, { schema });

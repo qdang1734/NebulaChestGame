@@ -54,7 +54,8 @@ app.use(cors({
 const PgStore = connectPgSimple(session);
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  // Force SSL config for Render diagnosis, bypassing NODE_ENV check
+  ssl: { rejectUnauthorized: false }, 
 });
 
 const sessionStore = new PgStore({
