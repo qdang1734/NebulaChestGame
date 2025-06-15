@@ -1,13 +1,16 @@
-import { CloudStorage } from '@twa-dev/sdk';
+import { TelegramCloudStorage } from './types';
 
 // Create a wrapper for storage that works in both contexts
 class StorageWrapper {
-  private storage: Storage | CloudStorage | null = null;
+  private storage: Storage | TelegramCloudStorage | null = null;
 
   constructor() {
     try {
       // Try to use Telegram WebApp storage first
-      if (window.Telegram?.WebApp?.CloudStorage) {
+      if (window.Telegram?.WebApp?.CloudStorage &&
+          typeof window.Telegram.WebApp.CloudStorage.getItem === 'function' &&
+          typeof window.Telegram.WebApp.CloudStorage.setItem === 'function' &&
+          typeof window.Telegram.WebApp.CloudStorage.removeItem === 'function') {
         this.storage = window.Telegram.WebApp.CloudStorage;
       } else {
         // Fallback to localStorage
@@ -23,11 +26,11 @@ class StorageWrapper {
     if (!this.storage) return null;
     
     try {
-      if (this.storage instanceof CloudStorage) {
-        const result = await this.storage.getItem(key);
+      if ('getItem' in this.storage && typeof this.storage.getItem === 'function') {
+        const result = await (this.storage as TelegramCloudStorage).getItem(key);
         return result;
       } else {
-        return this.storage.getItem(key);
+        return (this.storage as Storage).getItem(key);
       }
     } catch (error) {
       console.warn('Error getting item from storage:', error);
@@ -39,10 +42,10 @@ class StorageWrapper {
     if (!this.storage) return;
     
     try {
-      if (this.storage instanceof CloudStorage) {
-        await this.storage.setItem(key, value);
+      if ('setItem' in this.storage && typeof this.storage.setItem === 'function') {
+        await (this.storage as TelegramCloudStorage).setItem(key, value);
       } else {
-        this.storage.setItem(key, value);
+        (this.storage as Storage).setItem(key, value);
       }
     } catch (error) {
       console.warn('Error setting item in storage:', error);
@@ -53,10 +56,10 @@ class StorageWrapper {
     if (!this.storage) return;
     
     try {
-      if (this.storage instanceof CloudStorage) {
-        await this.storage.removeItem(key);
+      if ('removeItem' in this.storage && typeof this.storage.removeItem === 'function') {
+        await (this.storage as TelegramCloudStorage).removeItem(key);
       } else {
-        this.storage.removeItem(key);
+        (this.storage as Storage).removeItem(key);
       }
     } catch (error) {
       console.warn('Error removing item from storage:', error);
