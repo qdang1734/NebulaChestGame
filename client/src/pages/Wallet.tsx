@@ -129,11 +129,21 @@ const Wallet = ({ onScreenChange }: WalletProps) => {
   
   // Handle wallet connection through TON Space
   const handleConnectWallet = async () => {
-    window.open('https://app.tonkeeper.com/ton-connect?manifestUrl=https://nebulachestgame.onrender.com/tonconnect-manifest.json', '_blank');
+    const isTelegramWebApp = typeof window !== 'undefined' && window.Telegram && window.Telegram.WebApp;
+    if (isTelegramWebApp) {
+      await tonWallet.connect();
+    } else {
+      window.open('https://app.tonkeeper.com/ton-connect?manifestUrl=https://nebulachestgame.onrender.com/tonconnect-manifest.json', '_blank');
+    }
   };
   
   const handleDeposit = async () => {
-    window.open('https://app.tonkeeper.com/ton-connect?manifestUrl=https://nebulachestgame.onrender.com/tonconnect-manifest.json', '_blank');
+    const isTelegramWebApp = typeof window !== 'undefined' && window.Telegram && window.Telegram.WebApp;
+    if (isTelegramWebApp) {
+      await tonWallet.connect();
+    } else {
+      window.open('https://app.tonkeeper.com/ton-connect?manifestUrl=https://nebulachestgame.onrender.com/tonconnect-manifest.json', '_blank');
+    }
   };
   
   const handleWithdraw = async () => {

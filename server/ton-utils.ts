@@ -4,7 +4,7 @@
  */
 
 // Địa chỉ ví game chính thức
-export const GAME_WALLET_ADDRESS = "UQBoJh_jALLDvekZ-nna3fE-09PEYgAVKq1JRcMvP2KYsHG9";
+export const GAME_WALLET_ADDRESS = "UQDf_BlFDdYBVUudGOVCJ846issTL-mLpW6QfC93lg5MrbiY";
 
 // Kiểm tra xem địa chỉ TON có hợp lệ không
 export function isValidTonAddress(address: string): boolean {
