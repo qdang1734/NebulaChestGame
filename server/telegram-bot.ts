@@ -131,7 +131,6 @@ async function getOrCreateUser(telegramId: string, username: string, photoUrl?: 
 // Set up bot commands
 bot.start(async (ctx) => {
   console.log("[Telegram Bot] Received /start command");
-  
   try {
     const telegramIdNum = ctx.from.id;
     const telegramIdStr = telegramIdNum.toString();
@@ -151,18 +150,13 @@ bot.start(async (ctx) => {
     }
 
     console.log(`[Telegram Bot] Getting or creating user: ${username}`);
-    // Create or get user
     const session = await getOrCreateUser(telegramIdStr, username, photoUrl);
     
-    // Generate game link with token
-    // Sử dụng route /telegram để xử lý chuyển hướng an toàn
     const baseUrl = BASE_URL;
     const gameLink = `${baseUrl}/telegram?token=${session.authToken}`;
-    
     console.log(`[Telegram Bot] Generated game link: ${gameLink}`);
     
     try {
-      // Gửi tin nhắn chào mừng với nút truy cập trò chơi
       console.log(`[Telegram Bot] Sending welcome message to ${username}`);
       await ctx.reply(
         `👋 Xin chào ${username}!\n\nChào mừng đến với NebulaChest Game - nơi bạn có thể sưu tầm các chú mèo NFT độc đáo trên blockchain TON.`,
@@ -182,7 +176,6 @@ bot.start(async (ctx) => {
         }
       );
       
-      // Gửi thêm thông tin hướng dẫn
       setTimeout(async () => {
         await ctx.reply(
           `📌 Lệnh hữu ích:\n` +
@@ -194,8 +187,7 @@ bot.start(async (ctx) => {
       }, 1000);
     } catch (error) {
       console.error('[Telegram Bot] Error sending welcome message:', error);
-      // Fallback to regular message if inline keyboard fails
-      ctx.reply(
+      await ctx.reply(
         `👋 Xin chào ${username}!\n\nChào mừng đến với NebulaChest Game. Nhấp vào liên kết dưới đây để truy cập trò chơi:\n\n${gameLink}`
       );
     }
@@ -321,26 +313,23 @@ bot.command('menu', async (ctx) => {
 
 // Handle callback queries
 bot.on('callback_query', async (ctx) => {
-  if (!('data' in ctx.callbackQuery)) {
-    return ctx.answerCbQuery();
-  }
-  const callbackData = ctx.callbackQuery.data;
-  console.log('[Telegram Bot] Received callback query:', callbackData);
-
-  // Get user session from Telegram ID
-  const telegramIdStr = ctx.from.id.toString();
-  const session = userSessions.get(telegramIdStr);
-
-  if (!session) {
-    console.log(`[Telegram Bot] No session found for user ID: ${telegramIdStr}`);
-    return ctx.answerCbQuery('Bạn cần sử dụng lệnh /start trước để đăng nhập.', { show_alert: true });
-  }
-
   try {
-    // Answer callback query to remove the "loading" state
+    if (!('data' in ctx.callbackQuery)) {
+      return ctx.answerCbQuery();
+    }
+    const callbackData = ctx.callbackQuery.data;
+    console.log('[Telegram Bot] Received callback query:', callbackData);
+
+    const telegramIdStr = ctx.from.id.toString();
+    const session = userSessions.get(telegramIdStr);
+
+    if (!session) {
+      console.log(`[Telegram Bot] No session found for user ID: ${telegramIdStr}`);
+      return ctx.answerCbQuery('Bạn cần sử dụng lệnh /start trước để đăng nhập.', { show_alert: true });
+    }
+
     await ctx.answerCbQuery();
 
-    // Handle different callback data
     switch (callbackData) {
       case 'rank':
         await ctx.reply('🏆 Xếp hạng hiện tại chưa khả dụng. Vui lòng thử lại sau.');
@@ -349,22 +338,16 @@ bot.on('callback_query', async (ctx) => {
         await ctx.reply('💰 Tính năng nhận thưởng hàng ngày qua Telegram sẽ sớm được cập nhật!');
         break;
       case 'stats':
-        // Try to get user data from database
-        try {
-          const user = await storage.getUser(session.userId);
-          if (user) {
-            await ctx.reply(
-              `📊 Thống kê tài khoản của ${user.username}:\n\n` +
-              `💰 Số dư: ${user.balance.toFixed(3)} TON\n` +
-              `💎 Tổng phần thưởng: ${user.totalReward.toFixed(4)} TON\n` +
-              `🔄 Cập nhật lần cuối: ${new Date().toLocaleString('vi-VN')}`
-            );
-          } else {
-            await ctx.reply('❌ Không thể tải thông tin người dùng.');
-          }
-        } catch (error) {
-          console.error('Error getting user stats:', error);
-          await ctx.reply('❌ Đã xảy ra lỗi khi tải thông tin tài khoản.');
+        const user = await storage.getUser(session.userId);
+        if (user) {
+          await ctx.reply(
+            `📊 Thống kê tài khoản của ${user.username}:\n\n` +
+            `💰 Số dư: ${user.balance.toFixed(3)} TON\n` +
+            `💎 Tổng phần thưởng: ${user.totalReward.toFixed(4)} TON\n` +
+            `🔄 Cập nhật lần cuối: ${new Date().toLocaleString('vi-VN')}`
+          );
+        } else {
+          await ctx.reply('❌ Không thể tải thông tin người dùng.');
         }
         break;
       case 'referral':
@@ -389,11 +372,13 @@ bot.on('callback_query', async (ctx) => {
         await ctx.reply('❓ Lệnh không hợp lệ.');
     }
   } catch (error) {
-    console.error('Error handling callback query:', error);
+    console.error(`[Telegram Bot] Critical error in callback_query for user ${ctx.from?.id}:`, error);
     try {
-      await ctx.answerCbQuery('Đã xảy ra lỗi. Vui lòng thử lại sau.');
+      if ('callbackQuery' in ctx) {
+        await ctx.answerCbQuery('An error occurred. Please try again.').catch(e => console.error('Failed to answer callback query on error:', e));
+      }
     } catch (e) {
-      console.error('Failed to answer callback query:', e);
+      // Ignore if we can't even reply
     }
   }
 });

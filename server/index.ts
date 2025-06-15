@@ -144,18 +144,6 @@ app.use((req, res, next) => {
   // doesn't interfere with the other routes
   if (process.env.NODE_ENV === "development") {
     await setupVite(app, server);
-  } else {
-    // In production, serve the static files from the client build directory
-    // Note: We use process.cwd() which is reliable when 'npm start' is run from the project root.
-    const clientBuildPath = path.resolve(process.cwd(), 'client/dist');
-    
-    app.use(express.static(clientBuildPath));
-
-    // For any request that doesn't match a static file or API route, 
-    // send back the main index.html file. This is essential for single-page applications.
-    app.get('*', (req, res) => {
-      res.sendFile(path.resolve(clientBuildPath, 'index.html'));
-    });
   }
 
   // Use PORT from environment variable if available, otherwise use 5000
