@@ -1,4 +1,5 @@
-import { Router, type Request, type Response } from 'express';
+import { Router, type Response } from 'express';
+import { authenticateToken, type AuthRequest } from './middleware';
 import { db } from '../db';
 import { kitties, eggs } from '../schema';
 import { sql, eq, and } from 'drizzle-orm';
@@ -6,32 +7,12 @@ import { sql, eq, and } from 'drizzle-orm';
 const router = Router();
 
 // API lấy danh sách mèo của người dùng
-router.get('/user-kitties', async (req: Request, res: Response) => {
+router.get('/user-kitties', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
-    let userId: number | undefined;
-
-    // TODO: Refactor auth logic into a middleware
-    const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.startsWith("Bearer ")) {
-      const token = authHeader.substring(7);
-      const { validateAuthToken } = await import("../telegram-bot");
-      const userSession = validateAuthToken(token);
-      if (userSession) userId = userSession.userId;
-    }
+    const userId = req.user?.id;
 
     if (!userId) {
-      const queryToken = req.query.token as string | undefined;
-      if (queryToken) {
-        const { validateAuthToken } = await import("../telegram-bot");
-        const userSession = validateAuthToken(queryToken);
-        if (userSession) userId = userSession.userId;
-      }
-    }
-
-    if (!userId) {
-      // This is a temporary solution until proper auth middleware is in place.
-      // For now, let's use a mock user id for development
-      userId = 1;
+      return res.status(401).json({ error: 'User not authenticated' });
     }
 
     // Fetch kitties owned by user (opened eggs)

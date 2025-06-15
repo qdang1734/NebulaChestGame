@@ -1,4 +1,5 @@
-import { Router, type Request, type Response } from 'express';
+import { Router, type Response } from 'express';
+import { authenticateToken, type AuthRequest } from './middleware';
 import { db } from '../db';
 import { users, chestOpenings } from '../schema';
 import { eq, desc, sql } from 'drizzle-orm';
@@ -6,17 +7,13 @@ import { eq, desc, sql } from 'drizzle-orm';
 const router = Router();
 
 // API mở rương: cộng thưởng cho inviter nếu là lần đầu mở
-router.post('/open-chest', async (req: Request, res: Response) => {
+router.post('/open-chest', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
-    // Accept both camelCase and snake_case telegram ID from client
-    const rawTelegramId = req.body.telegramId ?? req.body.telegram_id;
-    const telegramId = rawTelegramId?.toString();
+    const user = req.user;
+    const telegramId = user?.telegramId;
     const { chestValue } = req.body;
-    if (!telegramId || !chestValue) return res.status(400).json({ error: 'Missing parameters' });
-    
-    // Lấy user hiện tại
-    const userResult = await db.select().from(users).where(eq(users.telegramId, telegramId)).limit(1);
-    const user = userResult[0];
+
+    if (!chestValue) return res.status(400).json({ error: 'Missing chest value' });
 
     if (!user) return res.status(404).json({ error: 'User not found' });
 
@@ -48,10 +45,10 @@ router.post('/open-chest', async (req: Request, res: Response) => {
 });
 
 // API lấy lịch sử mở rương của user
-router.get('/chest-history', async (req: Request, res: Response) => {
+router.get('/chest-history', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
-    const telegramId = req.query.telegramId as string;
-    if (!telegramId) return res.status(400).json({ error: 'Missing telegramId' });
+    const telegramId = req.user?.telegramId;
+    if (!telegramId) return res.status(401).json({ error: 'User not authenticated or telegramId missing' });
 
     const rows = await db.select({
       chestValue: chestOpenings.chestValue,

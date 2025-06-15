@@ -1,4 +1,5 @@
-import { Router, type Request, type Response } from 'express';
+import { Router, type Response } from 'express';
+import { authenticateToken, type AuthRequest } from './middleware';
 import { db } from '../db';
 import { chestOpenings } from '../schema';
 import { eq, and, gt, desc } from 'drizzle-orm';
@@ -6,10 +7,10 @@ import { eq, and, gt, desc } from 'drizzle-orm';
 const router = Router();
 
 // API lấy lịch sử invite reward của user
-router.get('/invite-rewards-history', async (req: Request, res: Response) => {
+router.get('/invite-rewards-history', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
-    const telegramId = req.query.telegramId as string;
-    if (!telegramId) return res.status(400).json({ error: 'Missing telegramId' });
+    const telegramId = req.user?.telegramId;
+    if (!telegramId) return res.status(401).json({ error: 'User not authenticated' });
 
     const rows = await db.select({
       chestValue: chestOpenings.chestValue,

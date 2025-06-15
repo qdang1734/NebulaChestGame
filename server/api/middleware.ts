@@ -39,7 +39,8 @@ export const authenticateToken = (req: AuthRequest, res: Response, next: NextFun
         return res.status(403).json({ error: 'Invalid token payload' });
       }
 
-      const userResult = await db.select({ id: users.id, username: users.username }).from(users).where(eq(users.id, userId)).limit(1);
+      // Fetch the full user object from the database
+      const userResult = await db.select().from(users).where(eq(users.id, payload.userId)).limit(1);
 
       if (userResult.length === 0) {
         return res.status(404).json({ error: 'User not found' });

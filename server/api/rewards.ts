@@ -1,4 +1,5 @@
-import { Router, type Request, type Response } from 'express';
+import { Router, type Response } from 'express';
+import { authenticateToken, type AuthRequest } from './middleware';
 import { db } from '../db';
 import { users, userCollections, kitties } from '../schema';
 import { eq } from 'drizzle-orm';
@@ -6,40 +7,12 @@ import { storage } from '../storage';
 
 const router = Router();
 
-// Helper function to get user ID from auth token or query
-async function getUserId(req: Request): Promise<number | null> {
-    let userId: number | undefined;
 
-    const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.startsWith("Bearer ")) {
-        const token = authHeader.substring(7);
-        const { validateAuthToken } = await import("../telegram-bot");
-        const userSession = validateAuthToken(token);
-        if (userSession) userId = userSession.userId;
-    }
-
-    if (!userId) {
-        const queryToken = req.query.token as string | undefined;
-        if (queryToken) {
-            const { validateAuthToken } = await import("../telegram-bot");
-            const userSession = validateAuthToken(queryToken);
-            if (userSession) userId = userSession.userId;
-        }
-    }
-
-    // Fallback for development, replace with proper error handling in production
-    if (!userId) {
-        console.warn('No user ID found, using fallback ID 1 for development.');
-        return 1;
-    }
-
-    return userId;
-}
 
 // Claim daily rewards from kitties
-router.post("/claim-rewards", async (req: Request, res: Response) => {
+router.post("/claim-rewards", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
-      const userId = await getUserId(req);
+            const userId = req.user?.id;
       if (!userId) {
         return res.status(401).json({ error: "Unauthorized: User ID not found" });
       }
@@ -91,9 +64,9 @@ router.post("/claim-rewards", async (req: Request, res: Response) => {
 });
 
 // Get user's login history and streak
-router.get("/login-history", async (req: Request, res: Response) => {
+router.get("/login-history", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
-      const userId = await getUserId(req);
+            const userId = req.user?.id;
       if (!userId) {
         return res.status(401).json({ error: "Unauthorized: User ID not found" });
       }
@@ -113,9 +86,9 @@ router.get("/login-history", async (req: Request, res: Response) => {
 });
 
 // Claim daily login reward
-router.post("/claim-login-reward", async (req: Request, res: Response) => {
+router.post("/claim-login-reward", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
-      const userId = await getUserId(req);
+            const userId = req.user?.id;
       if (!userId) {
         return res.status(401).json({ error: "Unauthorized: User ID not found" });
       }
