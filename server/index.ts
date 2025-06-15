@@ -74,10 +74,11 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: process.env.NODE_ENV === 'production', // Use secure cookies in production
-    httpOnly: true, // Prevent client-side script access
-    maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // Required for cross-site cookies
+    maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+    httpOnly: true, // Security: Prevents client-side script access.
+    // Correct settings for cross-origin (cross-domain) cookies
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    secure: process.env.NODE_ENV === 'production', // `secure: true` is required for `sameSite: 'none'`
   },
 }));
 
