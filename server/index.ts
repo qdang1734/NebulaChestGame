@@ -3,7 +3,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import path from 'path';
 import { setupVite, log } from "./vite";
-import { startBot } from "./telegram-bot";
+import { startBot, bot } from "./telegram-bot";
 import { startTransactionMonitor } from "./transaction-monitor";
 import cors from 'cors';
 import session from 'express-session';
@@ -86,6 +86,13 @@ app.use('/api', userKittiesRouter);
 app.use('/api', rewardsRouter);
 
 // Sử dụng webhook router cho các endpoints Telegram
+// Generate a secret path for the webhook
+const secretPath = `/telegraf/${bot.secretPathComponent()}`;
+
+// Use webhook router for Telegram updates
+app.use(bot.webhookCallback(secretPath));
+
+// Fallback webhook router for other webhooks if any
 app.use('/', webhookRouter);
 
 app.use((req, res, next) => {
@@ -162,7 +169,7 @@ app.use((req, res, next) => {
     log(`serving on port ${port}`);
     
     // Start Telegram bot and transaction monitor
-    startBot();
+    startBot(secretPath);
     startTransactionMonitor();
   });
 })();

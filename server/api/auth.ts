@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { eq } from 'drizzle-orm';
 import { db } from '../db';
 import { users } from '../../shared/schema';
-import { validateAuthToken } from '../telegram-bot';
+
 
 const router = Router();
 
@@ -16,23 +16,7 @@ const mockUserId = 1;
  * @param req The Express Request object.
  * @returns The user ID if the token is valid, otherwise null.
  */
-function getUserIdFromAuth(req: Request): number | null {
-  const authHeader = req.headers.authorization;
-  let token = '';
 
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    token = authHeader.substring(7);
-  } else if (req.query.token) {
-    token = req.query.token as string;
-  }
-
-  if (!token) {
-    return null;
-  }
-
-  const userSession = validateAuthToken(token);
-  return userSession ? userSession.userId : null;
-}
 
 
 // POST /api/login
@@ -61,6 +45,9 @@ router.post('/login', async (req: Request, res: Response) => {
     user = finalUserResult[0];
 
     if (user) {
+      // *** IMPORTANT: Create session on login ***
+      req.session.userId = user.id;
+
       res.json({ success: true, user });
     } else {
       res.status(500).json({ error: 'Failed to login or create user' });
@@ -74,7 +61,10 @@ router.post('/login', async (req: Request, res: Response) => {
 // GET /api/user
 router.get("/user", async (req: Request, res: Response) => {
   try {
-    const userId = getUserIdFromAuth(req) || mockUserId;
+    const userId = req.session.userId;
+    if (!userId) {
+      return res.status(401).json({ error: "User not authenticated" });
+    }
     
     const userResult = await db.select().from(users).where(eq(users.id, userId)).limit(1);
     const user = userResult[0];
@@ -93,26 +83,12 @@ router.get("/user", async (req: Request, res: Response) => {
 // GET /api/validate-token
 router.get("/validate-token", async (req: Request, res: Response) => {
   try {
-    const authHeader = req.headers.authorization;
-    let token = '';
-
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      token = authHeader.substring(7);
-    } else if (req.query.token) {
-      token = req.query.token as string;
+    const userId = req.session.userId;
+    if (!userId) {
+      return res.status(401).json({ valid: false, error: "User not authenticated" });
     }
 
-    if (!token) {
-      return res.status(401).json({ valid: false, error: "No authentication token provided" });
-    }
-
-    const userSession = validateAuthToken(token);
-
-    if (!userSession) {
-      return res.status(401).json({ valid: false, error: "Invalid or expired token" });
-    }
-
-    const userResult = await db.select().from(users).where(eq(users.id, userSession.userId)).limit(1);
+    const userResult = await db.select().from(users).where(eq(users.id, userId)).limit(1);
     const user = userResult[0];
 
     if (!user) {

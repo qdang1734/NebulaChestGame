@@ -1,4 +1,4 @@
-import { Telegraf, Context } from 'telegraf';
+import { Telegraf, Context, Input } from 'telegraf';
 import { storage } from './storage';
 import { InsertUser } from './schema';
 import { Request } from 'express';
@@ -13,27 +13,11 @@ export const mockUserId = 1;
  * @param req The Express Request object.
  * @returns The user ID if the token is valid, otherwise null.
  */
-export function getUserIdFromAuth(req: Request): number | null {
-  const authHeader = req.headers.authorization;
-  let token = '';
 
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    token = authHeader.substring(7);
-  } else if (req.query.token) {
-    token = req.query.token as string;
-  }
-
-  if (!token) {
-    return null;
-  }
-
-  const userSession = validateAuthToken(token);
-  return userSession ? userSession.userId : null;
-}
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '7958696875:AAFD4wI0Fh54m8v9jDDdkZgFEKlLNT-xie4';
 // Base URL for generating Telegram WebApp deep links
-const BASE_URL = process.env.APP_URL || 'https://nebulachestgamebackend.onrender.com';
+const BASE_URL = process.env.FRONTEND_URL || 'https://nebulachestgame.onrender.com';
 export const bot = new Telegraf(BOT_TOKEN);
 
 // In-memory storage for user sessions - maps Telegram IDs to our internal user IDs
@@ -423,40 +407,36 @@ export function validateAuthToken(token: string): UserSession | undefined {
 }
 
 // Start the bot
-export function startBot() {
-  // Tự động chuyển sang chế độ polling, không phụ thuộc USE_WEBHOOK
-  console.log('Khởi động Bot Telegram với chế độ polling...');
+export async function startBot(secretPath: string) {
+  try {
+    const backendUrl = process.env.BACKEND_URL;
+    if (!backendUrl) {
+        console.error('BACKEND_URL is not set. Webhook setup failed.');
+        // Fallback to polling for local development if needed
+        console.log('Falling back to polling mode for local development.');
+        await bot.launch();
+        return;
+    }
 
-  // Xóa webhook trước khi chạy polling
-  bot.telegram.deleteWebhook()
-    .then(() => {
-      console.log('✅ Webhook đã được xóa thành công');
-      
-      // Khởi động bot trong chế độ polling
-      bot.launch()
-        .then(() => {
-          console.log('🤖 Telegram bot đã khởi động thành công trong chế độ polling!');
-        })
-        .catch((err) => {
-          console.error('❌ Lỗi khi khởi động Telegram bot:', err);
-        });
-    })
-    .catch((err) => {
-      console.error('❌ Lỗi khi xóa webhook:', err);
-      
-      // Khởi động bot trong chế độ polling ngay cả khi không xóa được webhook
-      bot.launch()
-        .then(() => {
-          console.log('🤖 Telegram bot đã khởi động thành công trong chế độ polling!');
-        })
-        .catch((err) => {
-          console.error('❌ Lỗi khi khởi động Telegram bot:', err);
-        });
+    const webhookUrl = `${backendUrl}${secretPath}`;
+
+    // Set webhook
+    await bot.telegram.setWebhook(webhookUrl);
+    console.log(`[Telegram Bot] Webhook set to ${webhookUrl}`);
+
+    // Graceful stop
+    process.once('SIGINT', async () => {
+      console.log('Stopping bot and deleting webhook...');
+      await bot.telegram.deleteWebhook({ drop_pending_updates: true });
+      bot.stop('SIGINT');
     });
-      
-  // Enable graceful stop
-  process.once('SIGINT', () => bot.stop('SIGINT'));
-  process.once('SIGTERM', () => bot.stop('SIGTERM'));
-  
-  return bot;
+    process.once('SIGTERM', async () => {
+      console.log('Stopping bot and deleting webhook...');
+      await bot.telegram.deleteWebhook({ drop_pending_updates: true });
+      bot.stop('SIGTERM');
+    });
+
+  } catch (error) {
+    console.error('Error starting Telegram bot with webhook:', error);
+  }
 }
