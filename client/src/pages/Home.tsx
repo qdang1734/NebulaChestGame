@@ -430,10 +430,14 @@ const Home = () => {
     setErrorMessage(null);
     const apiUrl = import.meta.env.VITE_API_URL || 'https://nebulachestgamebackend.onrender.com';
     try {
+      const token = localStorage.getItem('token'); // IMPORTANT: Assumes token is stored in localStorage with key 'token'
       const response = await fetch(`${apiUrl}/api/open-egg`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ eggTypeId: currentEggId, telegram_id: user?.telegram_id }),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ eggTypeId: currentEggId }),
       });
       let data: any = null;
       if (!response.ok) {

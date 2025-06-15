@@ -249,29 +249,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
-      const { eggId } = req.body;
-      if (!eggId) {
-        return res.status(400).json({ error: "Egg ID is required" });
+      const { eggTypeId } = req.body;
+      if (!eggTypeId) {
+        return res.status(400).json({ error: "Egg Type ID is required" });
       }
 
-      // 1. Verify the egg belongs to the user and is not opened
-      const [eggToOpen] = await db.select().from(eggs).where(and(eq(eggs.id, eggId), eq(eggs.userId, userId)));
+      // 1. Get user and egg type details
+      const user = await storage.getUser(userId);
+      const [eggType] = await db.select().from(eggTypes).where(eq(eggTypes.id, eggTypeId));
 
-      if (!eggToOpen) {
-        return res.status(404).json({ error: "Egg not found or does not belong to user." });
+      if (!user) {
+        return res.status(404).json({ error: "User not found." });
+      }
+      if (!eggType) {
+        return res.status(404).json({ error: "Egg type not found." });
       }
 
-      if (eggToOpen.isOpened) {
-        return res.status(400).json({ error: "This egg has already been opened." });
+      // 2. Check if user has enough balance
+      const price = eggType.price || 0;
+      const userBalance = user.balance || 0;
+      if (userBalance < price) {
+        return res.status(400).json({ error: "Insufficient balance." });
       }
 
-      // 2. Get all possible kitties from this egg type
-      const possibleKitties = await db.select().from(kitties).where(eq(kitties.eggTypeId, eggToOpen.eggTypeId));
+      // 3. Deduct balance
+      const newBalance = userBalance - price;
+      await db.update(users).set({ balance: newBalance }).where(eq(users.id, userId));
+
+      // 4. Get all possible kitties from this egg type
+      const possibleKitties = await db.select().from(kitties).where(eq(kitties.eggTypeId, eggTypeId));
       if (possibleKitties.length === 0) {
         return res.status(500).json({ error: "No kitties found for this egg type." });
       }
 
-      // 3. Randomly select a kitty based on drop rates
+      // 5. Randomly select a kitty based on drop rates
       const totalDropRate = possibleKitties.reduce((sum, kitty) => sum + (kitty.dropRate || 0), 0);
       let random = Math.random() * totalDropRate;
       let selectedKitty = null;
@@ -283,23 +294,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
           break;
         }
       }
-      
-      if (!selectedKitty) { // Fallback in case of rounding errors
+
+      if (!selectedKitty) { // Fallback
         selectedKitty = possibleKitties[0];
       }
 
-      // 4. Add the new kitty to the user's collection
-      await storage.addUserCollection({
+      // 6. Create a record for the opened egg
+      await storage.createEgg({
         userId: userId,
+        eggTypeId: eggTypeId,
+        isOpened: true,
+        openedAt: new Date(),
         kittyId: selectedKitty.id,
-        acquiredAt: new Date()
       });
 
-      // 5. Mark the egg as opened
-      await storage.openEgg(eggId, selectedKitty.id);
+      // 7. Find the collection for the kitty
+      const collection = await storage.getCollectionByKittyId(selectedKitty.id);
+      if (!collection) {
+        // This is a server-side data integrity issue
+        return res.status(500).json({ error: "Could not find collection for the awarded kitty." });
+      }
 
-      // 6. Return the kitty that was "hatched"
+      // 8. Check if the user already has this collection item and update/create
+      const [existingUserCollection] = await db.select()
+        .from(userCollections)
+        .where(and(
+            eq(userCollections.userId, userId),
+            eq(userCollections.collectionId, collection.id)
+        ));
+
+      if (existingUserCollection) {
+        // If yes, increment the count
+        const newCount = (existingUserCollection.count || 0) + 1;
+        await db.update(userCollections)
+            .set({ count: newCount })
+            .where(eq(userCollections.id, existingUserCollection.id));
+      } else {
+        // If no, create a new entry
+        await storage.addUserCollection({
+            userId: userId,
+            collectionId: collection.id,
+            count: 1
+        });
+      }
+
+      // 9. Return the kitty that was "hatched"
       res.json(selectedKitty);
+
     } catch (error) {
       console.error("Error opening egg:", error);
       res.status(500).json({ error: "Failed to open egg" });
