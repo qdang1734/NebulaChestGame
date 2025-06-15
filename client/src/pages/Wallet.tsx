@@ -83,7 +83,7 @@ export const tonWallet = {
 };
 
 const GAME_WALLET_ADDRESS = "UQDf_BlFDdYBVUudGOVCJ846issTL-mLpW6QfC93lg5MrbiY";
-const MIN_DEPOSIT = 0.1;
+const MIN_DEPOSIT = 0.01;
 const MAX_DEPOSIT = 10000;
 
 const Wallet = ({ onScreenChange }: WalletProps) => {
