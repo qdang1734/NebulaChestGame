@@ -58,3 +58,35 @@ export interface Task {
   reward: number;
   completed: boolean;
 }
+
+// Unified and comprehensive Telegram WebApp type definitions
+export interface TelegramWebAppUser {
+  id: number;
+  first_name: string;
+  last_name?: string;
+  username?: string;
+  photo_url?: string;
+}
+
+export interface TelegramCloudStorage {
+  setItem: (key: string, value: string) => Promise<boolean>;
+  getItem: (key: string) => Promise<string | null>;
+  removeItem: (key: string) => Promise<boolean>;
+}
+
+export interface TelegramWebApp {
+  ready: () => void;
+  initDataUnsafe: { // Can be more specific if needed
+    user?: TelegramWebAppUser;
+    start_param?: string;
+  };
+  CloudStorage?: TelegramCloudStorage; // Make CloudStorage optional here
+  // Add other properties as they are used in the app
+  // E.g., expand(), close(), isExpanded, viewportHeight, etc.
+}
+
+declare global {
+  interface Window {
+    Telegram?: { WebApp?: TelegramWebApp };
+  }
+}

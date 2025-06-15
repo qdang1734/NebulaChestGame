@@ -1,26 +1,5 @@
 import React, { useState, useEffect } from "react";
 
-interface TelegramWebAppUser {
-  id: number;
-  first_name: string;
-  last_name?: string;
-  username?: string;
-  photo_url?: string;
-}
-
-interface TelegramWebApp {
-  initDataUnsafe: {
-    user?: TelegramWebAppUser;
-    start_param?: string;
-  };
-}
-
-declare global {
-  interface Window {
-    Telegram?: { WebApp: TelegramWebApp };
-  }
-}
-
 import { ChevronLeft, ChevronRight, Info, Award, User as UserIcon, Loader2, X } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import LanguageSelector from "@/components/ui/language-selector";
