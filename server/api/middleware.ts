@@ -17,7 +17,8 @@ export const authenticateToken = (req: AuthRequest, res: Response, next: NextFun
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1]; // Bearer <TOKEN>
 
-  if (token == null) {
+  // More robust check for invalid token
+  if (!token || token === 'null' || token === 'undefined') {
     return res.status(401).json({ error: 'No token provided' });
   }
 
