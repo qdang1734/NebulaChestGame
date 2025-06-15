@@ -252,7 +252,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             console.log('[DEBUG] Received /api/open-egg request with body:', JSON.stringify(req.body));
       const { eggTypeId } = req.body;
       if (eggTypeId === undefined) {
-        return res.status(400).json({ error: "Egg Type ID is required" });
+        return res.status(400).json({ error: "[DEBUG TEST] Egg Type ID is missing. Please check the request.",
+        });
       }
 
       // 1. Get user and egg type details
