@@ -6,6 +6,8 @@ import { setupVite, log } from "./vite";
 import { startBot } from "./telegram-bot";
 import { startTransactionMonitor } from "./transaction-monitor";
 import cors from 'cors';
+import session from 'express-session';
+import connectPgSimple from 'connect-pg-simple';
 import webhookRouter from "./webhook";
 import authRouter from "./api/auth";
 import chestRouter from "./api/chest";
@@ -30,6 +32,31 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'https://nebulachestgame.onrender.com',
   credentials: true,
+}));
+
+// Session middleware setup
+const PgStore = connectPgSimple(session);
+const sessionStore = new PgStore({
+  conString: process.env.DATABASE_URL,
+  createTableIfMissing: true,
+});
+
+// Trust the first proxy for secure cookies in production (e.g., on Render)
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
+
+app.use(session({
+  store: sessionStore,
+  secret: process.env.SESSION_SECRET || 'a-very-strong-secret-for-development',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === 'production', // Use secure cookies in production
+    httpOnly: true, // Prevent client-side script access
+    maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // Required for cross-site cookies
+  },
 }));
 
 // Đăng ký các router API mới
