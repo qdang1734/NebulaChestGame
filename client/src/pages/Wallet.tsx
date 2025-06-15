@@ -138,12 +138,14 @@ const Wallet = ({ onScreenChange }: WalletProps) => {
   };
   
   const handleDeposit = async () => {
-    const isTelegramWebApp = typeof window !== 'undefined' && window.Telegram && window.Telegram.WebApp;
-    if (isTelegramWebApp) {
-      await tonWallet.connect();
-    } else {
-      window.open('https://app.tonkeeper.com/ton-connect?manifestUrl=https://nebulachestgame.onrender.com/tonconnect-manifest.json', '_blank');
+    if (!isConnected) {
+      // Nếu chưa kết nối ví thì mở bảng kết nối
+      await handleConnectWallet();
+      return;
     }
+    // Nếu đã kết nối ví, thực hiện logic nạp tiền ở đây
+    // Ví dụ: mở modal hướng dẫn nạp, hoặc gửi transaction
+    alert("Đã kết nối ví. Thực hiện logic nạp tiền ở đây.");
   };
   
   const handleWithdraw = async () => {
