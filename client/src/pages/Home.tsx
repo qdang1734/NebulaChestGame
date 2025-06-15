@@ -441,6 +441,9 @@ const Home = () => {
       });
       let data: any = null;
       if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Failed to process the request.' }));
+        console.error('Error opening egg:', errorData.error);
+        setErrorMessage(errorData.error);
         // Fallback: FE random reward
         const rewards = defaultKittiesByEggId[currentEggId] || [];
         if (rewards.length > 0) {
