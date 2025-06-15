@@ -1,13 +1,12 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertEggTypeSchema, insertKittySchema } from "./schema";
+import { eggTypes, kitties, userCollections, eggs, users } from "./schema";
 import { db } from "./db";
-import { eggTypes, kitties, userCollections, eggs, users, chestOpenings } from "./schema";
-import { eq, and, desc, gt, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import withdrawalApi from "./withdrawal-api";
 import depositApi from "./deposit-api";
-import { getUserId } from "./api/auth-utils";
+import { authenticateToken, type AuthRequest } from "./api/middleware";
 
 
 
@@ -130,43 +129,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // For demo purposes, let's create some mock user data
 
   // Handle withdrawals
-  app.post("/api/withdraw", async (req: Request, res: Response) => {
+  app.post("/api/withdraw", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
       const { amount, address } = req.body;
+      const userId = req.user?.id; // Get user ID from JWT token
+
+      if (!userId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
 
       if (!amount || !address) {
         return res.status(400).json({ error: "Amount and address are required" });
       }
 
-      // Minimum withdrawal amount
       if (amount < 0.1) {
         return res.status(400).json({ error: "Minimum withdrawal amount is 0.1 TON" });
       }
 
-      // Lấy ID người dùng từ token xác thực
-      const userIdString = await getUserId(req);
-      const userId = parseInt(userIdString, 10);
-
-      // Get the user
       const user = await db.select().from(users).where(eq(users.id, userId)).then(rows => rows[0]);
       if (!user) {
-        return res.status(404).json({ error: "User not found, please login again" });
+        return res.status(404).json({ error: "User not found" });
       }
 
-      // Check if the user has enough balance
       if (!user.balance || user.balance < amount) {
         return res.status(400).json({ error: "Insufficient balance" });
       }
 
-      // Import ton-utils module for secure transaction processing
       const { processWithdrawal, isValidTonAddress } = await import("./ton-utils");
 
-      // Validate TON address format
       if (!isValidTonAddress(address)) {
         return res.status(400).json({ error: "Invalid TON address format" });
       }
 
-      // Process withdrawal using the secured method with private key from env variables
       const result = await processWithdrawal({
         amount,
         toAddress: address,
@@ -174,7 +168,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       if (result.success) {
-        // Update user balance only if transaction was successful
         await db.update(users)
           .set({ balance: user.balance - amount })
           .where(eq(users.id, userId));
@@ -189,7 +182,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           transactionHash: result.txHash
         });
       } else {
-        // Return error from the transaction processing
         res.status(400).json({ error: result.message });
       }
     } catch (error) {
@@ -549,36 +541,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // API endpoints for withdrawal
-  app.post("/api/withdraw", async (req: Request, res: Response) => {
-    await withdrawalApi.handleWithdrawalRequest(req, res);
-  });
-
-  app.get("/api/transaction-history/:userId", async (req: Request, res: Response) => {
-    await withdrawalApi.getTransactionHistory(req, res);
+  app.post("/api/withdraw", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+      req.body.userId = userId;
+      await withdrawalApi.handleWithdrawalRequest(req, res);
+    } catch (error) {
+      console.error("Error in withdrawal request:", error);
+      res.status(500).json({ success: false, error: "Lỗi khi xử lý yêu cầu rút tiền" });
+    }
   });
 
   // API endpoints for deposit
-  app.post("/api/deposit/register", async (req: Request, res: Response) => {
+  app.post("/api/deposit/register", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
-      // Lấy ID người dùng từ token xác thực
-      const userId = await getUserId(req);
-
+      const userId = req.user?.id;
       if (!userId) {
-        return res.status(401).json({ 
-          success: false, 
-          error: "Cần đăng nhập để nạp tiền" 
-        });
+        return res.status(401).json({ success: false, error: "Cần đăng nhập để nạp tiền" });
       }
-
-      // Thêm userId vào body để xử lý
       req.body.userId = userId;
       await depositApi.registerDeposit(req, res);
     } catch (error) {
       console.error("Error in deposit register:", error);
-      res.status(500).json({ 
-        success: false, 
-        error: "Lỗi khi xử lý yêu cầu nạp tiền" 
-      });
+      res.status(500).json({ success: false, error: "Lỗi khi xử lý yêu cầu nạp tiền" });
     }
   });
 
@@ -586,33 +574,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     await depositApi.verifyDeposit(req, res);
   });
 
-  app.post("/api/deposit/direct", async (req: Request, res: Response) => {
+  app.post("/api/deposit/direct", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
-      // Lấy ID người dùng từ token xác thực
-      const userId = await getUserId(req);
-
+      const userId = req.user?.id;
       if (!userId) {
-        return res.status(401).json({ 
-          success: false, 
-          error: "Cần đăng nhập để nạp tiền" 
-        });
+        return res.status(401).json({ success: false, error: "Cần đăng nhập để nạp tiền" });
       }
-
-      // Thêm userId vào body để xử lý
       req.body.userId = userId;
       await depositApi.handleDirectDeposit(req, res);
     } catch (error) {
       console.error("Error in direct deposit:", error);
-      res.status(500).json({ 
-        success: false, 
-        error: "Lỗi khi xử lý yêu cầu nạp tiền" 
-      });
+      res.status(500).json({ success: false, error: "Lỗi khi xử lý yêu cầu nạp tiền" });
+
     }
   });
-
-  // Validate Telegram auth token
-  // Removed login, user, and validate-token endpoints
-
 
   // API endpoint để thêm/trừ số dư cho người chơi (chỉ dành cho admin/dev)
   app.post("/api/admin/adjust-balance", async (req: Request, res: Response) => {
