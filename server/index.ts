@@ -53,9 +53,8 @@ app.use(cors({
 // Session middleware setup
 const PgStore = connectPgSimple(session);
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  // Force SSL config for Render diagnosis, bypassing NODE_ENV check
-  ssl: { rejectUnauthorized: false }, 
+  // Force SSL mode by appending it to the connection string for Render
+  connectionString: `${process.env.DATABASE_URL}?sslmode=no-verify`,
 });
 
 const sessionStore = new PgStore({

@@ -8,8 +8,7 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-const client = postgres(process.env.DATABASE_URL!, {
-  // Force SSL config for Render diagnosis, bypassing NODE_ENV check
-  ssl: { rejectUnauthorized: false }, 
-});
+// Force SSL mode by appending it to the connection string for Render
+const connectionString = `${process.env.DATABASE_URL!}?sslmode=no-verify`;
+const client = postgres(connectionString);
 export const db = drizzle(client, { schema });
