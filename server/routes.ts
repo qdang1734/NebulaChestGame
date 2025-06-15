@@ -250,7 +250,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: "Unauthorized" });
       }
       const { eggTypeId } = req.body;
-      if (!eggTypeId) {
+      if (eggTypeId === undefined) {
         return res.status(400).json({ error: "Egg Type ID is required" });
       }
 
