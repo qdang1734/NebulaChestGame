@@ -27,6 +27,12 @@ if (!process.env.NODE_ENV) {
 }
 
 const app = express();
+
+// Trust the first proxy for secure cookies in production (e.g., on Render)
+// This must be set before any middleware that relies on it, like express-session.
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
@@ -56,10 +62,7 @@ const sessionStore = new PgStore({
   createTableIfMissing: true,
 });
 
-// Trust the first proxy for secure cookies in production (e.g., on Render)
-if (process.env.NODE_ENV === 'production') {
-  app.set('trust proxy', 1);
-}
+
 
 app.use(session({
   store: sessionStore,

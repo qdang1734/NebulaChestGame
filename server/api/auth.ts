@@ -48,7 +48,15 @@ router.post('/login', async (req: Request, res: Response) => {
       // *** IMPORTANT: Create session on login ***
       req.session.userId = user.id;
 
-      res.json({ success: true, user });
+      // Explicitly save the session to the store before sending the response
+      // This prevents a race condition where the response is sent before the session is saved.
+      req.session.save((err) => {
+        if (err) {
+          console.error('Session save error:', err);
+          return res.status(500).json({ error: 'Failed to save session' });
+        }
+        res.json({ success: true, user });
+      });
     } else {
       res.status(500).json({ error: 'Failed to login or create user' });
     }
