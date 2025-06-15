@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { eggTypes, kitties, userCollections, eggs, users } from "./schema";
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import withdrawalApi from "./withdrawal-api";
 import depositApi from "./deposit-api";
 import { authenticateToken, type AuthRequest } from "./api/middleware";
@@ -190,7 +190,169 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Initialize database with egg types and kitties  
+  // =================================================================
+  //                AUTHENTICATED USER API ROUTES
+  // =================================================================
+
+  // API to get current user info
+  app.get("/api/user", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      res.json(user);
+    } catch (error) {
+      console.error("Error fetching user data:", error);
+      res.status(500).json({ error: "Failed to fetch user data" });
+    }
+  });
+
+  // API to get user's kitties
+  app.get("/api/user-kitties", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const userKitties = await storage.getUserCollections(userId);
+      res.json(userKitties);
+    } catch (error) {
+      console.error("Error fetching user kitties:", error);
+      res.status(500).json({ error: "Failed to fetch user kitties" });
+    }
+  });
+
+  // API to get user's eggs
+  app.get("/api/eggs", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const userEggs = await storage.getUserEggs(userId);
+      res.json(userEggs);
+    } catch (error) {
+      console.error("Error fetching user eggs:", error);
+      res.status(500).json({ error: "Failed to fetch user eggs" });
+    }
+  });
+
+  // API to open an egg
+  app.post("/api/open-egg", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const { eggId } = req.body;
+      if (!eggId) {
+        return res.status(400).json({ error: "Egg ID is required" });
+      }
+
+      // 1. Verify the egg belongs to the user and is not opened
+      const [eggToOpen] = await db.select().from(eggs).where(and(eq(eggs.id, eggId), eq(eggs.userId, userId)));
+
+      if (!eggToOpen) {
+        return res.status(404).json({ error: "Egg not found or does not belong to user." });
+      }
+
+      if (eggToOpen.isOpened) {
+        return res.status(400).json({ error: "This egg has already been opened." });
+      }
+
+      // 2. Get all possible kitties from this egg type
+      const possibleKitties = await db.select().from(kitties).where(eq(kitties.eggTypeId, eggToOpen.eggTypeId));
+      if (possibleKitties.length === 0) {
+        return res.status(500).json({ error: "No kitties found for this egg type." });
+      }
+
+      // 3. Randomly select a kitty based on drop rates
+      const totalDropRate = possibleKitties.reduce((sum, kitty) => sum + (kitty.dropRate || 0), 0);
+      let random = Math.random() * totalDropRate;
+      let selectedKitty = null;
+
+      for (const kitty of possibleKitties) {
+        random -= (kitty.dropRate || 0);
+        if (random <= 0) {
+          selectedKitty = kitty;
+          break;
+        }
+      }
+      
+      if (!selectedKitty) { // Fallback in case of rounding errors
+        selectedKitty = possibleKitties[0];
+      }
+
+      // 4. Add the new kitty to the user's collection
+      await storage.addUserCollection({
+        userId: userId,
+        kittyId: selectedKitty.id,
+        acquiredAt: new Date()
+      });
+
+      // 5. Mark the egg as opened
+      await storage.openEgg(eggId, selectedKitty.id);
+
+      // 6. Return the kitty that was "hatched"
+      res.json(selectedKitty);
+    } catch (error) {
+      console.error("Error opening egg:", error);
+      res.status(500).json({ error: "Failed to open egg" });
+    }
+  });
+
+  // API to get user's login history and streak
+  app.get("/api/login-history", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const loginHistoryData = await storage.getUserLoginHistory(userId);
+      const currentStreak = await storage.getUserCurrentStreak(userId);
+      res.json({
+        currentStreak,
+        history: loginHistoryData,
+        nextRewardAmount: storage.getDailyRewardForStreak(currentStreak + 1)
+      });
+    } catch (error) {
+      console.error("Error fetching login history:", error);
+      res.status(500).json({ error: "Failed to fetch login history" });
+    }
+  });
+
+  // API to claim daily login reward
+  app.post("/api/claim-login-reward", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const { loginHistoryId } = req.body;
+      if (!loginHistoryId) {
+        return res.status(400).json({ error: "Login history ID is required" });
+      }
+      const result = await storage.claimDailyReward(userId, loginHistoryId);
+      if (!result.success) {
+        return res.status(400).json({ error: "Failed to claim reward, it may have already been claimed" });
+      }
+      res.json({
+        success: true,
+        rewardAmount: result.amount,
+        message: `You've received ${result.amount} TON as a login reward!`
+      });
+    } catch (error) {
+      console.error("Error claiming login reward:", error);
+      res.status(500).json({ error: "Failed to claim login reward" });
+    }
+  });
+
+  // Initialize data (for development only)pes and kitties  
   app.post("/api/initialize-data", async (req: Request, res: Response) => {
     try {
       // Check if data already exists
