@@ -12,23 +12,18 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
-  // Get auth token from localStorage if available (safe in Telegram WebView)
-  let authToken: string | null = null;
-  try {
-    authToken = localStorage.getItem('authToken');
-  } catch (_) {
-    // Storage might be unavailable (e.g., inside Telegram WebView); ignore
-  }
-  
-  // Build headers with auth token if available
+  // Centralized token management will be handled by a dedicated store.
+  // This function will retrieve the token from the store.
+  const token = localStorage.getItem('authToken'); // We'll replace this with a proper state manager later
+
   const headers: Record<string, string> = {};
-  
+
   if (data) {
     headers["Content-Type"] = "application/json";
   }
-  
-  if (authToken) {
-    headers["Authorization"] = `Bearer ${authToken}`;
+
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
   }
   
   const baseApi = import.meta.env.VITE_API_URL || 'https://nebulachestgamebackend.onrender.com';

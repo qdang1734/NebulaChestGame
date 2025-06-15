@@ -267,8 +267,9 @@ const Home = () => {
           const data = await res.json();
           if (data && data.user) {
             setUser(data.user);
-            localStorage.setItem('telegram_id', id.toString());
-            localStorage.setItem('username', displayName || username || '');
+            if (data.token) {
+              localStorage.setItem('authToken', data.token);
+            }
           }
         } catch (error) {
           console.error("Failed to login:", error);
@@ -286,6 +287,9 @@ const Home = () => {
             const data = await res.json();
             if (data && data.user) {
               setUser(data.user);
+              if (data.token) {
+                localStorage.setItem('authToken', data.token);
+              }
             }
           } catch (error) {
             console.error("Fallback login failed:", error);

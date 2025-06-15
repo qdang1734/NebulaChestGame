@@ -6,9 +6,7 @@ import { setupVite, log } from "./vite";
 import { startBot, bot } from "./telegram-bot";
 import { startTransactionMonitor } from "./transaction-monitor";
 import cors from 'cors';
-import session from 'express-session';
-import connectPgSimple from 'connect-pg-simple';
-import { Pool } from 'pg';
+
 // import fs from 'fs'; // Removed, unused in this context
 import webhookRouter from "./webhook";
 import authRouter from "./api/auth";
@@ -45,58 +43,10 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: allowedOrigins,
-  credentials: true,
+
 }));
 
-// Session middleware setup
-const PgStore = connectPgSimple(session);
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  // Explicitly enable SSL for production on Render, but disable certificate verification.
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : undefined,
-});
-
-const sessionStore = new PgStore({
-  pool: pool,
-  createTableIfMissing: true,
-});
-
-
-
-app.use(session({
-  store: sessionStore,
-  secret: process.env.SESSION_SECRET || 'a-very-strong-secret-for-development',
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-    httpOnly: true, // Security: Prevents client-side script access.
-    // Correct settings for cross-origin (cross-domain) cookies
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-    secure: process.env.NODE_ENV === 'production', // `secure: true` is required for `sameSite: 'none'`
-    domain: process.env.NODE_ENV === 'production' ? '.onrender.com' : undefined, // Share cookie across subdomains
-  },
-}));
-
-// Diagnostic middleware to log session and cookie details for every request
-app.use((req, res, next) => {
-  // A simple check to avoid logging for static assets if any are added later
-  if (req.path.includes('.')) {
-    return next();
-  }
-
-  console.log('--- DIAGNOSTIC LOG ---');
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
-  console.log('Request Headers:', {
-    origin: req.headers.origin,
-    cookie: req.headers.cookie, // This is the most important part
-  });
-  // This log runs AFTER the session middleware, so req.session should be populated.
-  console.log('Session Object:', req.session);
-  console.log('Session User ID:', req.session?.userId);
-  next();
-});
+// Session-related middleware has been removed in favor of JWT authentication.
 
 // Đăng ký các router API mới
 app.use('/api', authRouter);

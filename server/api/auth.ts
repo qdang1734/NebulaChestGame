@@ -1,4 +1,6 @@
 import { Router, Request, Response } from 'express';
+import jwt from 'jsonwebtoken';
+import { authenticateToken, AuthRequest } from './middleware';
 import { eq } from 'drizzle-orm';
 import { db } from '../db';
 import { users } from '../../shared/schema';
@@ -45,18 +47,16 @@ router.post('/login', async (req: Request, res: Response) => {
     user = finalUserResult[0];
 
     if (user) {
-      // *** IMPORTANT: Create session on login ***
-      req.session.userId = user.id;
+      // *** IMPORTANT: Create JWT on login ***
+      const secret = process.env.SESSION_SECRET;
+      if (!secret) {
+        console.error('JWT secret is not defined. Please set SESSION_SECRET environment variable.');
+        return res.status(500).json({ error: 'Server configuration error' });
+      }
 
-      // Explicitly save the session to the store before sending the response
-      // This prevents a race condition where the response is sent before the session is saved.
-      req.session.save((err) => {
-        if (err) {
-          console.error('Session save error:', err);
-          return res.status(500).json({ error: 'Failed to save session' });
-        }
-        res.json({ success: true, user });
-      });
+      const token = jwt.sign({ userId: user.id }, secret, { expiresIn: '30d' });
+
+      res.json({ success: true, user, token });
     } else {
       res.status(500).json({ error: 'Failed to login or create user' });
     }
@@ -67,13 +67,15 @@ router.post('/login', async (req: Request, res: Response) => {
 });
 
 // GET /api/user
-router.get("/user", async (req: Request, res: Response) => {
+router.get("/user", authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
-    const userId = req.session.userId;
+    // The user object is attached to the request by the authenticateToken middleware.
+    const userId = req.user?.id;
     if (!userId) {
+      // This case should not be reached if middleware is working
       return res.status(401).json({ error: "User not authenticated" });
     }
-    
+
     const userResult = await db.select().from(users).where(eq(users.id, userId)).limit(1);
     const user = userResult[0];
 
@@ -89,20 +91,18 @@ router.get("/user", async (req: Request, res: Response) => {
 });
 
 // GET /api/validate-token
-router.get("/validate-token", async (req: Request, res: Response) => {
+router.get("/validate-token", authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
-    const userId = req.session.userId;
-    if (!userId) {
+    // If authenticateToken middleware passes, the token is valid.
+    // The user object is available in req.user.
+    const user = req.user;
+    if (!user) {
+      // This case should not be reached if middleware is working
       return res.status(401).json({ valid: false, error: "User not authenticated" });
     }
 
-    const userResult = await db.select().from(users).where(eq(users.id, userId)).limit(1);
-    const user = userResult[0];
-
-    if (!user) {
-      return res.status(404).json({ valid: false, error: "User not found" });
-    }
-
+    // The user object from the middleware might be partial, so we can just confirm validity.
+    // Or we can send back the user data we have.
     res.json({ valid: true, user });
   } catch (error) {
     console.error("Error validating token:", error);
